@@ -11,13 +11,13 @@ DeepSeek Harness's generic reasoning controls do not fully match the request par
    The Models settings page gains a separate **Claude Provider** form. You can create multiple Provider IDs under this type without mixing them with generic custom providers.
 
 <p align="center">
-  <img src="./docs/images/provider-entry.jpg" alt="Add Claude Provider entry in DeepSeek Harness" width="580">
+  <img src="./docs/images/provider-entry.en.jpg" alt="Add Claude Provider entry in DeepSeek Harness" width="580">
 </p>
 
    Selecting **Add Claude Provider** opens the dedicated Anthropic Messages form:
 
 <p align="center">
-  <img src="./docs/images/claude-provider-form.jpg" alt="Claude Provider form in DeepSeek Harness" width="580">
+  <img src="./docs/images/claude-provider-form.en.jpg" alt="Claude Provider form in DeepSeek Harness" width="580">
 </p>
 
 2. **Adds model-specific reasoning modes**
@@ -31,7 +31,7 @@ DeepSeek Harness's generic reasoning controls do not fully match the request par
    New models default to five levels. Claude providers default to High, while toggle-only models default to On. For adaptive-thinking models, the plugin converts the selection to Claude's `thinking.type: adaptive` and `output_config.effort` request format instead of allowing the adapter to collapse or reject the selected level.
 
 <p align="center">
-  <img src="./docs/images/model-defaults.jpg" alt="Claude model capacity defaults and reasoning modes" width="580">
+  <img src="./docs/images/model-defaults.en.jpg" alt="Claude model capacity defaults and reasoning modes" width="580">
 </p>
 
 3. **Adds native Anthropic model discovery**
