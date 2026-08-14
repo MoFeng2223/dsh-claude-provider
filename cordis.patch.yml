@@ -1,0 +1,18 @@
+- insert:
+    - id: claude-provider
+      name: '@mofeng2223/dsh-claude-provider'
+      config:
+        debug: !!js process.env.DSH_CLAUDE_PROVIDER_DEBUG === '1'
+        routes:
+          - provider: '*'
+            models: &adaptive_claude_models
+              - claude-*
+        effortMap:
+          minimal: low
+          low: low
+          medium: medium
+          high: high
+          xhigh: xhigh
+          max: max
+- id: ui-settings-models
+  disabled: true
