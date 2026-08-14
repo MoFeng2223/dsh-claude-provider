@@ -1,5 +1,7 @@
 # DSH Claude Provider
 
+English | [简体中文](./README.zh-CN.md)
+
 `@mofeng2223/dsh-claude-provider` adds a visible Custom Claude provider type to
 DeepSeek Harness and fixes Anthropic Messages routes that still
 serialize reasoning as `thinking.type: enabled` with `budget_tokens`. For the
