@@ -2,83 +2,104 @@
 
 English | [简体中文](./README.zh-CN.md)
 
-`@mofeng2223/dsh-claude-provider` adds a visible, reusable Claude provider type
-to DeepSeek Harness and fixes its routes when an Anthropic Messages adapter still
-serialize reasoning as `thinking.type: enabled` with `budget_tokens`. For the
-explicitly registered provider/model pairs, it converts the outgoing request to
-`thinking.type: adaptive` plus `output_config.effort`.
+DeepSeek Harness's generic reasoning controls do not fully match the request parameters expected by newer Claude models. A selected level can therefore fail with HTTP 400, or be silently mapped to another effective level, such as Max behaving as High. `@mofeng2223/dsh-claude-provider` adds an explicit Claude provider type and sends the reasoning parameters that each configured Claude model expects.
 
-Use **Add Claude provider** to create any number of Provider IDs under this one
-type. Membership is stored explicitly in the plugin's own settings namespace.
-The plugin never infers membership from the `anthropic-messages` protocol, a
-`claude-*` model ID, or a default reasoning value. Generic custom providers and
-built-in providers are therefore untouched even when they use the same wire
-protocol.
+## What this plugin does
 
-Only explicitly typed providers receive the Claude badge, native model
-discovery, recorded capacity defaults, per-model thinking modes, and adaptive
-request conversion. At request time the plugin reads the selected model's
-configured effort list: four- and five-level profiles use adaptive thinking,
-while an On/Off profile keeps the legacy budget-based path. Newly entered
-models default to five levels, so future model IDs can be configured without a
-plugin update. Claude providers select High by default; toggle-only models are
-shown as On/Off and default to On, without an extra provider-default choice.
+1. **Adds a dedicated Claude provider type**
 
-The same package supplies both the Host request adapter and the Web settings
-client. The client marks its model-directory request with a private discovery
-protocol handled by the Host half. Only that request uses Anthropic's native
-`GET /v1/models` endpoint, with `x-api-key` and `anthropic-version` headers.
-It supports Anthropic cursor pagination and reads `display_name`,
-`max_input_tokens`, and `max_tokens` when the provider returns them. No
-OpenAI-compatible listing or Bearer-auth fallback is attempted.
+   The Models settings page gains a separate **Claude Provider** form. You can create multiple Provider IDs under this type without mixing them with generic custom providers.
+
+<p align="center">
+  <img src="./docs/images/provider-entry.jpg" alt="Add Claude Provider entry in DeepSeek Harness" width="580">
+</p>
+
+   Selecting **Add Claude Provider** opens the dedicated Anthropic Messages form:
+
+<p align="center">
+  <img src="./docs/images/claude-provider-form.jpg" alt="Claude Provider form in DeepSeek Harness" width="580">
+</p>
+
+2. **Adds model-specific reasoning modes**
+
+   Each model can use one of three configurable mode sets:
+
+   - Five levels: Low, Medium, High, XHigh, and Max
+   - Four levels: Low, Medium, High, and Max
+   - Toggle: On or Off
+
+   New models default to five levels. Claude providers default to High, while toggle-only models default to On. For adaptive-thinking models, the plugin converts the selection to Claude's `thinking.type: adaptive` and `output_config.effort` request format instead of allowing the adapter to collapse or reject the selected level.
+
+<p align="center">
+  <img src="./docs/images/model-defaults.jpg" alt="Claude model capacity defaults and reasoning modes" width="580">
+</p>
+
+3. **Adds native Anthropic model discovery**
+
+   DeepSeek Harness's generic custom provider cannot list models for the `anthropic-messages` protocol. This plugin adds model discovery for Claude providers through the provider's native Anthropic-compatible `GET /v1/models` endpoint, including cursor pagination.
+
+4. **Fills known Claude model defaults after discovery**
+
+   When a discovered model matches a recorded Claude model ID, the plugin automatically fills its context window, maximum output length, and reasoning-mode set. Models entered manually remain fully editable and are not overwritten by this lookup.
+
+5. **Leaves every other provider unchanged**
+
+   All discovery, defaults, reasoning controls, and request rewriting are limited to Provider IDs explicitly created as **Claude Providers**. DeepSeek Harness's built-in providers and ordinary custom providers keep their original behavior, even when they use `anthropic-messages` or expose a `claude-*` model ID.
 
 ## Install
 
-Build the Web client and refresh the single distributable archive after
-changing the plugin source:
+### Published package
 
-```sh
-npm run build
-npm pack --pack-destination dist
-```
-
-Install the published package directly:
+Install the Web profile for the browser interface:
 
 ```sh
 npx @deepseek-ai/dsh plugin --profile web add @mofeng2223/dsh-claude-provider
+```
+
+Install the Headless profile for command-line runs without the Web interface:
+
+```sh
 npx @deepseek-ai/dsh plugin --profile headless add @mofeng2223/dsh-claude-provider
 ```
 
-Restart the corresponding Harness process after installation.
+Restart the corresponding DeepSeek Harness process after installation.
 
-Do not use the source directory as the normal installation target. That creates
-a pnpm `link:` dependency, and current DSH/pnpm builds can leave the top-level
-link behind after the dependency and bundle registration have been removed.
-Archive installs are package-manager-owned and uninstall without those stale
-links.
+### From source
 
-Set `DSH_CLAUDE_PROVIDER_DEBUG=1` temporarily to print one redacted line for
-each rewritten request. The diagnostic contains only provider, model, and
-selected effort.
+Build and package the repository first:
 
-## Remove
+```sh
+git clone https://github.com/MoFeng2223/dsh-claude-provider.git
+cd dsh-claude-provider
+npm install
+npm run build
+mkdir -p dist
+npm pack --pack-destination dist
+```
+
+Install the generated package into the Web profile:
+
+```sh
+npx @deepseek-ai/dsh plugin --profile web add ./dist/mofeng2223-dsh-claude-provider-*.tgz
+```
+
+Or install it into the Headless profile:
+
+```sh
+npx @deepseek-ai/dsh plugin --profile headless add ./dist/mofeng2223-dsh-claude-provider-*.tgz
+```
+
+## Uninstall
+
+Run the command for each profile where the plugin was installed:
 
 ```sh
 npx @deepseek-ai/dsh plugin --profile web remove @mofeng2223/dsh-claude-provider
 npx @deepseek-ai/dsh plugin --profile headless remove @mofeng2223/dsh-claude-provider
 ```
 
-Uninstall intentionally leaves `~/.dsh/settings.yaml` and stored credentials
-alone. Existing Claude-type providers therefore remain visible as ordinary custom
-`anthropic-messages` routes, but lose this plugin's Claude badge, per-model
-thinking-mode controls, native Anthropic model discovery, and adaptive request
-rewrite.
+Uninstalling the plugin does not delete `~/.dsh/settings.yaml` or stored credentials. Existing Claude providers remain configured as ordinary custom `anthropic-messages` routes, but lose the Claude-specific interface, model discovery, defaults, reasoning controls, and adaptive request conversion supplied by this plugin.
 
-The plugin never stores or logs API keys. Model discovery uses the one-shot key
-typed into the form or resolves the existing route's credential through DSH;
-the value is sent only to that route's Anthropic Models API. Its request
-transformer runs only inside `llm/stream` calls for Provider IDs explicitly
-registered under this plugin's type and leaves every other provider untouched.
+## License
 
-The generated `.tgz` package is portable. Copy it to Windows and install it by
-its local path; no source build or platform-specific dependency is required.
+[MIT](./LICENSE)
