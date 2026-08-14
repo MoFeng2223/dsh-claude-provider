@@ -260,6 +260,42 @@ export function isClaudeProviderType(settings, provider) {
   return settings?.providerTypes?.[provider] === CLAUDE_PROVIDER_TYPE
 }
 
+/** Give typed Claude routes a concrete default and readable labels for toggle-only models. */
+export function withClaudeProviderReasoningDefaults(modelInfo) {
+  const reasoning = modelInfo?.reasoning
+  if (reasoning === undefined || !Array.isArray(reasoning.efforts)) return modelInfo
+  const ids = new Set(reasoning.efforts.map(effort => String(effort.id)))
+  const toggleOnly = ids.size === 2 && ids.has('off') && ids.has('high')
+  return {
+    ...modelInfo,
+    reasoning: {
+      ...reasoning,
+      defaultEffort: 'high',
+      efforts: toggleOnly
+        ? reasoning.efforts.map(effort => ({
+            ...effort,
+            name: effort.id === 'off' ? 'Off' : effort.id === 'high' ? 'On' : effort.name,
+          }))
+        : reasoning.efforts,
+    },
+  }
+}
+
+function installClaudeModelInfoDefaults(ctx, providerTypes) {
+  const llm = ctx.llm
+  const upstream = llm.resolveModelInfo
+  const wrapped = async function (provider, model, signal) {
+    const info = await upstream.call(this, provider, model, signal)
+    return isClaudeProviderType(providerTypes.get(), provider)
+      ? withClaudeProviderReasoningDefaults(info)
+      : info
+  }
+  llm.resolveModelInfo = wrapped
+  ctx.effect(() => () => {
+    if (llm.resolveModelInfo === wrapped) llm.resolveModelInfo = upstream
+  })
+}
+
 /** Four- and five-level model profiles are adaptive; the two-level toggle is legacy budget thinking. */
 export function shouldUseAdaptiveThinking(modelInfo) {
   const efforts = modelInfo?.reasoning?.efforts
@@ -422,6 +458,7 @@ export function apply(ctx, config) {
     settingsNs: CLAUDE_PROVIDER_SETTINGS_NS,
     settingsPath: ['providerTypes'],
   }])
+  installClaudeModelInfoDefaults(ctx, providerTypes)
   installClaudeModelDiscovery(ctx)
   const storage = new AsyncLocalStorage()
   const upstreamFetch = globalThis.fetch

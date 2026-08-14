@@ -9,6 +9,7 @@ import {
   readAnthropicModelPage,
   rewriteAnthropicPayload,
   shouldUseAdaptiveThinking,
+  withClaudeProviderReasoningDefaults,
 } from '../src/index.js'
 
 test('recognizes only provider ids explicitly registered under the Claude provider type', () => {
@@ -23,6 +24,32 @@ test('recognizes only provider ids explicitly registered under the Claude provid
   assert.equal(isClaudeProviderType(settings, 'generic-anthropic-route'), false)
   assert.equal(isClaudeProviderType({ providerTypes: { xiaobai: 'other-type' } }, 'xiaobai'), false)
   assert.equal(isClaudeProviderType({ providerTypes: {} }, 'claude-opus-5'), false)
+})
+
+test('uses High by default and presents toggle-only models as On or Off', () => {
+  const adaptive = {
+    reasoning: {
+      efforts: ['low', 'medium', 'high', 'max'].map(id => ({ id, name: id })),
+    },
+  }
+  assert.deepEqual(withClaudeProviderReasoningDefaults(adaptive), {
+    reasoning: {
+      defaultEffort: 'high',
+      efforts: adaptive.reasoning.efforts,
+    },
+  })
+
+  const toggle = {
+    reasoning: {
+      efforts: [{ id: 'off', name: 'Off' }, { id: 'high', name: 'High' }],
+    },
+  }
+  assert.deepEqual(withClaudeProviderReasoningDefaults(toggle), {
+    reasoning: {
+      defaultEffort: 'high',
+      efforts: [{ id: 'off', name: 'Off' }, { id: 'high', name: 'On' }],
+    },
+  })
 })
 
 test('enters the adaptive request path only for explicitly typed provider ids', async () => {

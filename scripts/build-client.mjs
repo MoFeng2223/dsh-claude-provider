@@ -155,13 +155,13 @@ replaceOnce(
 replaceOnce(
   'provider type state',
   '\t\t\tconst [baseURL, setBaseURL] = (0, react.useState)("");\n\t\t\tconst [protocol, setProtocol] = (0, react.useState)(protocols[0] ?? "");',
-  '\t\t\tconst [baseURL, setBaseURL] = (0, react.useState)("");\n\t\t\tconst providerType = props.providerType ?? "generic";\n\t\t\tconst setProviderType = () => {};\n\t\t\tconst isAdaptiveClaude = providerType === CLAUDE_PROVIDER_TYPE;\n\t\t\tconst [protocol, setProtocol] = (0, react.useState)(isAdaptiveClaude ? "anthropic-messages" : protocols[0] ?? "");',
+  '\t\t\tconst [baseURL, setBaseURL] = (0, react.useState)("");\n\t\t\tconst providerType = props.providerType ?? "generic";\n\t\t\tconst isAdaptiveClaude = providerType === CLAUDE_PROVIDER_TYPE;\n\t\t\tconst [protocol, setProtocol] = (0, react.useState)(isAdaptiveClaude ? "anthropic-messages" : protocols[0] ?? "");',
 )
 
 replaceOnce(
   'Claude profile serialization',
   '\t\t\t\t\t\tapi: protocol,\n\t\t\t\t\t\tbaseURL,\n\t\t\t\t\t\tmodels: models.map((model) => ({ ...model }))',
-  '\t\t\t\t\t\tapi: isAdaptiveClaude ? "anthropic-messages" : protocol,\n\t\t\t\t\t\tbaseURL,\n\t\t\t\t\t\tmodels: models.map((model) => isAdaptiveClaude ? withDefaultClaudeReasoning(model) : { ...model })',
+  '\t\t\t\t\t\tapi: isAdaptiveClaude ? "anthropic-messages" : protocol,\n\t\t\t\t\t\tbaseURL,\n\t\t\t\t\t\tmodels: models.map((model) => isAdaptiveClaude ? withDefaultClaudeReasoning(model) : { ...model }),\n\t\t\t\t\t\t...isAdaptiveClaude ? { reasoning: "high" } : {}',
 )
 
 replaceOnce(
@@ -183,9 +183,9 @@ replaceOnce(
 )
 
 replaceOnce(
-  'provider type field',
+  'Claude provider intro',
   `\t\t\t\t\t(0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\t\t\tclassName: ModelsSection_module_css_default["field"],\n\t\t\t\t\t\tchildren: [(0, react_jsx_runtime.jsx)("span", {\n\t\t\t\t\t\t\tclassName: ModelsSection_module_css_default["fieldLabel"],\n\t\t\t\t\t\t\tchildren: t("customRoute")`,
-  `\t\t\t\t\t(0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\t\t\tclassName: ModelsSection_module_css_default["field"],\n\t\t\t\t\t\tchildren: [(0, react_jsx_runtime.jsx)("span", {\n\t\t\t\t\t\t\tclassName: ModelsSection_module_css_default["fieldLabel"],\n\t\t\t\t\t\t\tchildren: t("customProviderType")\n\t\t\t\t\t\t}), (0, react_jsx_runtime.jsxs)("select", {\n\t\t\t\t\t\t\tclassName: \`\${ModelsSection_module_css_default["input"]} \${ModelsSection_module_css_default["selectInput"]}\`,\n\t\t\t\t\t\t\tvalue: providerType,\n\t\t\t\t\t\t\t"aria-label": t("customProviderType"),\n\t\t\t\t\t\t\tdisabled: profileDisabled,\n\t\t\t\t\t\t\tonChange: (event) => {\n\t\t\t\t\t\t\t\tconst nextType = event.target.value;\n\t\t\t\t\t\t\t\tsetProviderType(nextType);\n\t\t\t\t\t\t\t\tif (nextType === "claude-adaptive") setProtocol("anthropic-messages");\n\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\tchildren: [(0, react_jsx_runtime.jsx)("option", { value: "generic", children: t("customProviderTypeGeneric") }), (0, react_jsx_runtime.jsx)("option", { value: "claude-adaptive", children: t("customProviderTypeClaude") })]\n\t\t\t\t\t\t})]\n\t\t\t\t\t}),\n\t\t\t\t\tisAdaptiveClaude ? (0, react_jsx_runtime.jsx)("p", {\n\t\t\t\t\t\tclassName: ModelsSection_module_css_default["savedNotice"],\n\t\t\t\t\t\trole: "status",\n\t\t\t\t\t\tchildren: t("adaptiveClaudeEnabled")\n\t\t\t\t\t}) : null,\n\t\t\t\t\t(0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\t\t\tclassName: ModelsSection_module_css_default["field"],\n\t\t\t\t\t\tchildren: [(0, react_jsx_runtime.jsx)("span", {\n\t\t\t\t\t\t\tclassName: ModelsSection_module_css_default["fieldLabel"],\n\t\t\t\t\t\t\tchildren: t("customRoute")`,
+  `\t\t\t\t\tisAdaptiveClaude ? (0, react_jsx_runtime.jsx)("p", {\n\t\t\t\t\t\tclassName: ModelsSection_module_css_default["savedNotice"],\n\t\t\t\t\t\trole: "status",\n\t\t\t\t\t\tchildren: t("adaptiveClaudeEnabled")\n\t\t\t\t\t}) : null,\n\t\t\t\t\t(0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\t\t\tclassName: ModelsSection_module_css_default["field"],\n\t\t\t\t\t\tchildren: [(0, react_jsx_runtime.jsx)("span", {\n\t\t\t\t\t\t\tclassName: ModelsSection_module_css_default["fieldLabel"],\n\t\t\t\t\t\t\tchildren: t("customRoute")`,
 )
 
 replaceOnce(
@@ -195,21 +195,9 @@ replaceOnce(
 )
 
 replaceOnce(
-  'provider type display is immutable',
-  '\t\t\t\t\t\t\t"aria-label": t("customProviderType"),\n\t\t\t\t\t\t\tdisabled: profileDisabled,',
-  '\t\t\t\t\t\t\t"aria-label": t("customProviderType"),\n\t\t\t\t\t\t\tdisabled: true,',
-)
-
-replaceOnce(
   'protocol lock',
   '\t\t\t\t\t\t\tdisabled: profileDisabled,\n\t\t\t\t\t\t\tonChange: (event) => {\n\t\t\t\t\t\t\t\tsetProtocol(event.target.value);',
   '\t\t\t\t\t\t\tdisabled: profileDisabled || isAdaptiveClaude,\n\t\t\t\t\t\t\tonChange: (event) => {\n\t\t\t\t\t\t\t\tsetProtocol(event.target.value);',
-)
-
-replaceOnce(
-  'Claude type defaults current model drafts',
-  '\t\t\t\t\t\t\t\tif (nextType === "claude-adaptive") setProtocol("anthropic-messages");',
-  '\t\t\t\t\t\t\t\tif (nextType === "claude-adaptive") {\n\t\t\t\t\t\t\t\t\tsetProtocol("anthropic-messages");\n\t\t\t\t\t\t\t\t\tsetModels((current) => current.map(withDefaultClaudeReasoning));\n\t\t\t\t\t\t\t\t}',
 )
 
 replaceOnce(
@@ -298,13 +286,13 @@ replaceOnce(
 replaceOnce(
   'English Claude copy',
   '\t\t\tcustomTitle: "Custom provider",\n\t\t\tcustomTag: "Custom",',
-  '\t\t\tcustomTitle: "Custom provider",\n\t\t\tcustomTag: "Custom",\n\t\t\tcustomProviderType: "Provider type",\n\t\t\tcustomProviderTypeGeneric: "Generic custom provider",\n\t\t\tcustomProviderTypeClaude: "Custom Claude provider",\n\t\t\tclaudeCustomAdd: "Add Claude provider",\n\t\t\tclaudeCustomTitle: "Claude provider",\n\t\t\tclaudeTypeUnavailable: "Claude provider type storage is unavailable.",\n\t\t\tclaudeTypeTag: "Claude provider",\n\t\t\tclaudeTypeIntro: "Only this provider type enables Claude model discovery, recorded capacities, thinking modes, and adaptive request conversion.",\n\t\t\tadaptiveClaudeEnabled: "Choose a thinking mode for each model. New models default to five levels.",\n\t\t\tadaptiveClaudeHelpLabel: "Thinking mode help",\n\t\t\tadaptiveClaudeHelp: "Five (low / medium / high / xhigh / max): Fable 5, Opus 5, Opus 4.8, Opus 4.7, Sonnet 5\\nFour (low / medium / high / max): Opus 4.6, Sonnet 4.6\\nOn / Off: Haiku 4.5",\n\t\t\tadaptiveClaudeTag: "Claude configured",\n\t\t\tthinkingPreset: "Thinking mode",\n\t\t\tthinkingPresetToggle: "On / Off",\n\t\t\tthinkingPresetFour: "Four levels",\n\t\t\tthinkingPresetFive: "Five levels (default)",',
+  '\t\t\tcustomTitle: "Custom provider",\n\t\t\tcustomTag: "Custom",\n\t\t\tclaudeCustomAdd: "Add Claude provider",\n\t\t\tclaudeCustomTitle: "Claude provider",\n\t\t\tclaudeTypeUnavailable: "Claude provider type storage is unavailable.",\n\t\t\tclaudeTypeTag: "Claude provider",\n\t\t\tclaudeTypeIntro: "Only this provider type enables Claude model discovery, recorded capacities, thinking modes, and adaptive request conversion.",\n\t\t\tadaptiveClaudeEnabled: "Choose a thinking mode for each model. New models default to five levels.",\n\t\t\tadaptiveClaudeHelpLabel: "Thinking mode help",\n\t\t\tadaptiveClaudeHelp: "Five (low / medium / high / xhigh / max): Fable 5, Opus 5, Opus 4.8, Opus 4.7, Sonnet 5\\nFour (low / medium / high / max): Opus 4.6, Sonnet 4.6\\nOn / Off: Haiku 4.5",\n\t\t\tadaptiveClaudeTag: "Claude configured",\n\t\t\tthinkingPreset: "Thinking mode",\n\t\t\tthinkingPresetToggle: "On / Off",\n\t\t\tthinkingPresetFour: "Four levels",\n\t\t\tthinkingPresetFive: "Five levels (default)",',
 )
 
 replaceOnce(
   'Chinese Claude copy',
   '\t\t\tcustomTitle: "自定义提供方",\n\t\t\tcustomTag: "自定义",',
-  '\t\t\tcustomTitle: "自定义提供方",\n\t\t\tcustomTag: "自定义",\n\t\t\tcustomProviderType: "供应商类型",\n\t\t\tcustomProviderTypeGeneric: "通用自定义供应商",\n\t\t\tcustomProviderTypeClaude: "自定义 Claude 供应商",\n\t\t\tclaudeCustomAdd: "添加 Claude 提供方",\n\t\t\tclaudeCustomTitle: "Claude 提供方",\n\t\t\tclaudeTypeUnavailable: "Claude 提供方类型存储不可用。",\n\t\t\tclaudeTypeTag: "Claude 提供方",\n\t\t\tclaudeTypeIntro: "只有此提供方类型会启用 Claude 模型发现、已记录容量、思考模式和 adaptive 请求转换。",\n\t\t\tadaptiveClaudeEnabled: "每个模型可单独选择思考模式；新增模型默认使用五档。",\n\t\t\tadaptiveClaudeHelpLabel: "思考模式说明",\n\t\t\tadaptiveClaudeHelp: "五档（低 / 中 / 高 / 超高 / 最大）：Fable 5、Opus 5、Opus 4.8、Opus 4.7、Sonnet 5\\n四档（低 / 中 / 高 / 最大）：Opus 4.6、Sonnet 4.6\\n开启 / 关闭：Haiku 4.5",\n\t\t\tadaptiveClaudeTag: "Claude 已适配",\n\t\t\tthinkingPreset: "思考模式",\n\t\t\tthinkingPresetToggle: "开启 / 关闭",\n\t\t\tthinkingPresetFour: "四档",\n\t\t\tthinkingPresetFive: "五档（默认）",',
+  '\t\t\tcustomTitle: "自定义提供方",\n\t\t\tcustomTag: "自定义",\n\t\t\tclaudeCustomAdd: "添加 Claude 提供方",\n\t\t\tclaudeCustomTitle: "Claude 提供方",\n\t\t\tclaudeTypeUnavailable: "Claude 提供方类型存储不可用。",\n\t\t\tclaudeTypeTag: "Claude 提供方",\n\t\t\tclaudeTypeIntro: "只有此提供方类型会启用 Claude 模型发现、已记录容量、思考模式和 adaptive 请求转换。",\n\t\t\tadaptiveClaudeEnabled: "每个模型可单独选择思考模式；新增模型默认使用五档。",\n\t\t\tadaptiveClaudeHelpLabel: "思考模式说明",\n\t\t\tadaptiveClaudeHelp: "五档（低 / 中 / 高 / 超高 / 最大）：Fable 5、Opus 5、Opus 4.8、Opus 4.7、Sonnet 5\\n四档（低 / 中 / 高 / 最大）：Opus 4.6、Sonnet 4.6\\n开启 / 关闭：Haiku 4.5",\n\t\t\tadaptiveClaudeTag: "Claude 已适配",\n\t\t\tthinkingPreset: "思考模式",\n\t\t\tthinkingPresetToggle: "开启 / 关闭",\n\t\t\tthinkingPresetFour: "四档",\n\t\t\tthinkingPresetFive: "五档（默认）",',
 )
 
 await mkdir(dirname(outputPath), { recursive: true })

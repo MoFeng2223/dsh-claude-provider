@@ -21,7 +21,8 @@ request conversion. At request time the plugin reads the selected model's
 configured effort list: four- and five-level profiles use adaptive thinking,
 while an On/Off profile keeps the legacy budget-based path. Newly entered
 models default to five levels, so future model IDs can be configured without a
-plugin update.
+plugin update. Claude providers select High by default; toggle-only models are
+shown as On/Off and default to On, without an extra provider-default choice.
 
 The same package supplies both the Host request adapter and the Web settings
 client. The client marks its model-directory request with a private discovery
