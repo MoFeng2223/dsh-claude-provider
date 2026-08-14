@@ -2,9 +2,11 @@
 
 [English](./README.md) | 简体中文
 
-`@mofeng2223/dsh-claude-provider` 为 DeepSeek Harness 增加一个可见的“自定义 Claude 提供方”类型，并修正部分 Anthropic Messages 路由仍将思考参数序列化为 `thinking.type: enabled` 与 `budget_tokens` 的问题。对于已配置的提供方和模型组合，插件会将请求转换为 `thinking.type: adaptive` 与 `output_config.effort`。
+`@mofeng2223/dsh-claude-provider` 为 DeepSeek Harness 增加一个可见且可复用的“Claude 提供方”类型，并修正其 Anthropic Messages 适配器仍将思考参数序列化为 `thinking.type: enabled` 与 `budget_tokens` 的问题。对于明确登记在此类型下的提供方和模型组合，插件会将请求转换为 `thinking.type: adaptive` 与 `output_config.effort`。
 
-插件默认识别所有提供方路由中的 `claude-*` 模型。发送请求时，插件会读取该模型配置的思考档位：四档和五档配置使用 adaptive thinking；开启/关闭配置继续使用旧版基于预算的思考方式。因此，未来新增的 Claude 模型 ID 无需更新插件即可使用。
+通过“添加 Claude 提供方”可以在同一个类型下创建任意多个 Provider ID。类型归属会明确保存在插件自己的设置命名空间中。插件不会根据 `anthropic-messages` 协议、`claude-*` 模型 ID 或默认思考强度推断类型。因此，即使通用自定义提供方或内置提供方使用相同协议，插件也不会修改它们。
+
+只有明确登记为此类型的提供方才会获得 Claude 标识、原生模型发现、已记录容量预填、按模型设置思考模式以及 adaptive 请求转换。发送请求时，插件会读取所选模型配置的思考档位：四档和五档配置使用 adaptive thinking；开启/关闭配置继续使用旧版基于预算的思考方式。手动新增的模型默认使用五档，因此未来新增的模型 ID 也可以直接配置。
 
 同一个 npm 包同时提供 Host 请求适配器和 Web 设置客户端。客户端会使用内部发现协议标记“获取模型目录”请求，再由 Host 部分处理。只有这个请求会调用 Anthropic 原生的 `GET /v1/models` 接口，并使用 `x-api-key` 和 `anthropic-version` 请求头。
 
@@ -41,13 +43,13 @@ npx @deepseek-ai/dsh plugin --profile web remove @mofeng2223/dsh-claude-provider
 npx @deepseek-ai/dsh plugin --profile headless remove @mofeng2223/dsh-claude-provider
 ```
 
-卸载插件时会保留 `~/.dsh/settings.yaml` 和已经保存的凭据。现有的自定义提供方仍会作为普通的 `anthropic-messages` 路由显示，但会失去本插件提供的 Claude 标识、按模型配置思考模式、Anthropic 原生模型发现以及 adaptive 请求改写功能。
+卸载插件时会保留 `~/.dsh/settings.yaml` 和已经保存的凭据。现有的 Claude 类型提供方仍会作为普通的 `anthropic-messages` 自定义路由显示，但会失去本插件提供的 Claude 标识、按模型配置思考模式、Anthropic 原生模型发现以及 adaptive 请求改写功能。
 
 ## 安全与隐私
 
 插件不会存储或记录 API 密钥。获取模型列表时，插件会使用表单中临时输入的密钥，或者通过 DSH 解析现有路由保存的凭据。密钥只会发送到该路由对应的 Anthropic Models API。
 
-请求转换器仅在匹配的 `llm/stream` 调用中运行，不会修改其他提供方或非 Claude 模型的请求。
+请求转换器只会在明确登记到本插件类型的 Provider ID 所对应的 `llm/stream` 调用中运行，不会修改任何其他提供方。
 
 ## Windows 支持
 

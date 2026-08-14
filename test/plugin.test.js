@@ -1,12 +1,90 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
+  apply,
   anthropicModelsUrl,
+  CLAUDE_PROVIDER_DIRECTORY_SENTINEL,
   discoverAnthropicModels,
+  isClaudeProviderType,
   readAnthropicModelPage,
   rewriteAnthropicPayload,
   shouldUseAdaptiveThinking,
 } from '../src/index.js'
+
+test('recognizes only provider ids explicitly registered under the Claude provider type', () => {
+  const settings = {
+    providerTypes: {
+      xiaobai: 'claude-adaptive',
+      morecode: 'claude-adaptive',
+    },
+  }
+  assert.equal(isClaudeProviderType(settings, 'xiaobai'), true)
+  assert.equal(isClaudeProviderType(settings, 'morecode'), true)
+  assert.equal(isClaudeProviderType(settings, 'generic-anthropic-route'), false)
+  assert.equal(isClaudeProviderType({ providerTypes: { xiaobai: 'other-type' } }, 'xiaobai'), false)
+  assert.equal(isClaudeProviderType({ providerTypes: {} }, 'claude-opus-5'), false)
+})
+
+test('enters the adaptive request path only for explicitly typed provider ids', async () => {
+  const cleanups = []
+  let streamHook
+  let resolutions = 0
+  let directoryEntries
+  const providerTypeSettings = {
+    providerTypes: {
+      xiaobai: 'claude-adaptive',
+      morecode: 'claude-adaptive',
+    },
+  }
+  const ctx = {
+    llm: {
+      discoverModels: async () => [],
+      resolveModelInfo: async () => {
+        resolutions += 1
+        return { reasoning: { efforts: ['low', 'medium', 'high', 'xhigh', 'max'].map(id => ({ id })) } }
+      },
+      registerConfigurableProviders: entries => {
+        directoryEntries = entries
+      },
+    },
+    settings: {
+      register: () => ({ get: () => providerTypeSettings }),
+    },
+    get: () => undefined,
+    effect: setup => {
+      const cleanup = setup()
+      if (typeof cleanup === 'function') cleanups.push(cleanup)
+    },
+    on: (event, listener) => {
+      assert.equal(event, 'llm/stream')
+      streamHook = listener
+    },
+  }
+  const values = async function* () { yield 'ok' }
+
+  try {
+    apply(ctx, {})
+    assert.deepEqual(directoryEntries, [{
+      provider: CLAUDE_PROVIDER_DIRECTORY_SENTINEL,
+      displayName: 'Claude Provider Type',
+      settingsNs: 'dsh-claude-provider',
+      settingsPath: ['providerTypes'],
+    }])
+    assert.deepEqual(
+      await Array.fromAsync(streamHook({ provider: 'generic-anthropic-route', model: 'claude-opus-5' }, values)),
+      ['ok'],
+    )
+    assert.equal(resolutions, 0)
+
+    assert.deepEqual(
+      await Array.fromAsync(streamHook({ provider: 'xiaobai', model: 'claude-opus-5' }, values)),
+      ['ok'],
+    )
+    assert.equal(resolutions, 1)
+  } finally {
+    for (const cleanup of cleanups.reverse()) cleanup()
+  }
+})
 
 const state = level => ({ model: 'claude-fable-5', level, effortMap: {
   minimal: 'low',

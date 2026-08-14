@@ -2,16 +2,25 @@
 
 English | [简体中文](./README.zh-CN.md)
 
-`@mofeng2223/dsh-claude-provider` adds a visible Custom Claude provider type to
-DeepSeek Harness and fixes Anthropic Messages routes that still
+`@mofeng2223/dsh-claude-provider` adds a visible, reusable Claude provider type
+to DeepSeek Harness and fixes its routes when an Anthropic Messages adapter still
 serialize reasoning as `thinking.type: enabled` with `budget_tokens`. For the
-configured provider/model pairs, it converts the outgoing request to
+explicitly registered provider/model pairs, it converts the outgoing request to
 `thinking.type: adaptive` plus `output_config.effort`.
 
-The bundled defaults recognize every `claude-*` model on every provider route.
-At request time the plugin reads the model's configured effort list: four- and
-five-level profiles use adaptive thinking, while an On/Off profile keeps the
-legacy budget-based path. This lets future Claude model IDs work without a
+Use **Add Claude provider** to create any number of Provider IDs under this one
+type. Membership is stored explicitly in the plugin's own settings namespace.
+The plugin never infers membership from the `anthropic-messages` protocol, a
+`claude-*` model ID, or a default reasoning value. Generic custom providers and
+built-in providers are therefore untouched even when they use the same wire
+protocol.
+
+Only explicitly typed providers receive the Claude badge, native model
+discovery, recorded capacity defaults, per-model thinking modes, and adaptive
+request conversion. At request time the plugin reads the selected model's
+configured effort list: four- and five-level profiles use adaptive thinking,
+while an On/Off profile keeps the legacy budget-based path. Newly entered
+models default to five levels, so future model IDs can be configured without a
 plugin update.
 
 The same package supplies both the Host request adapter and the Web settings
@@ -59,7 +68,7 @@ npx @deepseek-ai/dsh plugin --profile headless remove @mofeng2223/dsh-claude-pro
 ```
 
 Uninstall intentionally leaves `~/.dsh/settings.yaml` and stored credentials
-alone. Existing custom providers therefore remain visible as ordinary custom
+alone. Existing Claude-type providers therefore remain visible as ordinary custom
 `anthropic-messages` routes, but lose this plugin's Claude badge, per-model
 thinking-mode controls, native Anthropic model discovery, and adaptive request
 rewrite.
@@ -67,8 +76,8 @@ rewrite.
 The plugin never stores or logs API keys. Model discovery uses the one-shot key
 typed into the form or resolves the existing route's credential through DSH;
 the value is sent only to that route's Anthropic Models API. Its request
-transformer runs only inside matching `llm/stream` calls and leaves nonmatching
-providers and models untouched.
+transformer runs only inside `llm/stream` calls for Provider IDs explicitly
+registered under this plugin's type and leaves every other provider untouched.
 
 The generated `.tgz` package is portable. Copy it to Windows and install it by
 its local path; no source build or platform-specific dependency is required.

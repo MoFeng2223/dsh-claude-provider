@@ -1,6 +1,6 @@
 {
   "name": "@mofeng2223/dsh-claude-provider",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Custom Claude provider support for DeepSeek Harness",
   "author": "mofeng2223",
   "license": "MIT",
@@ -23,6 +23,10 @@
     "registry": "https://registry.npmjs.org/"
   },
   "type": "module",
+  "dependencies": {
+    "@deepseek-ai/dsh-settings": "0.1.0-rc.6",
+    "@deepseek-ai/schemastery": "3.18.1"
+  },
   "exports": {
     ".": "./src/index.js",
     "./client": "./lib/client.js",

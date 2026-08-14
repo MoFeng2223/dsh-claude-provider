@@ -1,7 +1,17 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
+import z from '@deepseek-ai/schemastery'
+import { settingsNamespace } from '@deepseek-ai/dsh-settings'
 
 export const name = 'claude-provider'
-export const inject = ['llm']
+export const inject = ['llm', 'settings']
+
+export const CLAUDE_PROVIDER_TYPE = 'claude-adaptive'
+export const CLAUDE_PROVIDER_SETTINGS_NS = settingsNamespace('dsh-claude-provider')
+export const CLAUDE_PROVIDER_DIRECTORY_SENTINEL = 'dsh-claude-provider-type'
+
+const ProviderTypeSettings = z.object({
+  providerTypes: z.dict(z.const(CLAUDE_PROVIDER_TYPE)).default({}),
+})
 
 const DEFAULT_EFFORT_MAP = Object.freeze({
   minimal: 'low',
@@ -235,36 +245,19 @@ function installClaudeModelDiscovery(ctx) {
 }
 
 function resolveConfig(config = {}) {
-  if (!Array.isArray(config.routes) || config.routes.length === 0) {
-    throw new Error('claude-provider: routes must contain at least one provider')
-  }
-
-  const targets = new Map()
-  for (const [routeIndex, route] of config.routes.entries()) {
-    const provider = requireNonEmptyString(route?.provider, `routes[${routeIndex}].provider`)
-    if (!Array.isArray(route.models) || route.models.length === 0) {
-      throw new Error(`claude-provider: route "${provider}" must contain at least one model`)
-    }
-    if (targets.has(provider)) {
-      throw new Error(`claude-provider: duplicate provider route "${provider}"`)
-    }
-    targets.set(provider, new Set(route.models.map((model, modelIndex) =>
-      requireNonEmptyString(model, `routes[${routeIndex}].models[${modelIndex}]`))))
-  }
-
   const effortMap = { ...DEFAULT_EFFORT_MAP, ...config.effortMap }
   for (const [level, effort] of Object.entries(effortMap)) {
     requireNonEmptyString(level, 'effortMap key')
     requireNonEmptyString(effort, `effortMap.${level}`)
   }
 
-  return { targets, effortMap, debug: config.debug === true }
+  return { effortMap, debug: config.debug === true }
 }
 
-function isTarget(targets, provider, model) {
-  const matches = patterns => patterns !== undefined && [...patterns].some(pattern =>
-    pattern === '*' || pattern === model || pattern.endsWith('*') && model.startsWith(pattern.slice(0, -1)))
-  return matches(targets.get(provider)) || matches(targets.get('*'))
+/** Whether an explicitly registered provider belongs to this plugin's Claude type. */
+export function isClaudeProviderType(settings, provider) {
+  if (typeof provider !== 'string' || provider.length === 0) return false
+  return settings?.providerTypes?.[provider] === CLAUDE_PROVIDER_TYPE
 }
 
 /** Four- and five-level model profiles are adaptive; the two-level toggle is legacy budget thinking. */
@@ -418,6 +411,17 @@ async function* modelAwareStream(ctx, storage, resolved, options, next) {
 
 export function apply(ctx, config) {
   const resolved = resolveConfig(config)
+  const providerTypes = ctx.settings.register(
+    CLAUDE_PROVIDER_SETTINGS_NS,
+    ProviderTypeSettings,
+    { base: { providerTypes: {} } },
+  )
+  ctx.llm.registerConfigurableProviders([{
+    provider: CLAUDE_PROVIDER_DIRECTORY_SENTINEL,
+    displayName: 'Claude Provider Type',
+    settingsNs: CLAUDE_PROVIDER_SETTINGS_NS,
+    settingsPath: ['providerTypes'],
+  }])
   installClaudeModelDiscovery(ctx)
   const storage = new AsyncLocalStorage()
   const upstreamFetch = globalThis.fetch
@@ -447,7 +451,7 @@ export function apply(ctx, config) {
   })
 
   ctx.on('llm/stream', (options, next) => {
-    if (!isTarget(resolved.targets, options.provider, options.model)) return next()
+    if (!isClaudeProviderType(providerTypes.get(), options.provider)) return next()
     return modelAwareStream(ctx, storage, resolved, options, next)
   })
 }
