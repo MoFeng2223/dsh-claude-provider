@@ -304,6 +304,61 @@ export function shouldUseAdaptiveThinking(modelInfo) {
   return ids.has('low') && ids.has('medium') && ids.has('high') && ids.has('max')
 }
 
+function hasAdaptiveEffortMap(map) {
+  if (map === null || typeof map !== 'object' || Array.isArray(map)) return false
+  return ['low', 'medium', 'high', 'max'].every(level => typeof map[level] === 'string' && map[level].length > 0)
+}
+
+/** Whether a pi-ai catalog model should be serialized with adaptive thinking. */
+export function piModelHasAdaptiveEfforts(model) {
+  return hasAdaptiveEffortMap(model?.thinkingLevelMap)
+}
+
+/**
+ * Stamp `compat.forceAdaptiveThinking` onto a pi-ai model so the Anthropic
+ * adapter builds `thinking.type: adaptive` before `@anthropic-ai/sdk` sees the
+ * payload. That is what removes the SDK deprecation warning for Opus 4.6.
+ */
+export function withForcedAdaptiveThinking(model, provider, settings) {
+  if (!isClaudeProviderType(settings, provider)) return model
+  if (model === null || typeof model !== 'object' || Array.isArray(model)) return model
+  if (model.compat?.forceAdaptiveThinking === true) return model
+  if (!piModelHasAdaptiveEfforts(model)) return model
+  return {
+    ...model,
+    compat: { ...model.compat, forceAdaptiveThinking: true },
+  }
+}
+
+function installForceAdaptiveThinking(ctx, providerTypes) {
+  const llm = ctx.llm
+  if (typeof llm.listProviders !== 'function' || typeof llm.registration !== 'function') return
+
+  const patched = new WeakSet()
+  const wrap = () => {
+    for (const provider of llm.listProviders()) {
+      const id = provider?.id
+      if (typeof id !== 'string' || id.length === 0) continue
+      let adapter
+      try {
+        adapter = llm.registration(id).adapter
+      } catch {
+        continue
+      }
+      if (adapter === null || typeof adapter !== 'object' || typeof adapter.modelOf !== 'function') continue
+      if (patched.has(adapter)) continue
+      const original = adapter.modelOf.bind(adapter)
+      adapter.modelOf = (snapshot, providerId, modelId) => (
+        withForcedAdaptiveThinking(original(snapshot, providerId, modelId), providerId, providerTypes.get())
+      )
+      patched.add(adapter)
+    }
+  }
+
+  wrap()
+  ctx.effect(() => ctx.on('llm/adapters-updated', wrap), 'claude-provider: force adaptive thinking')
+}
+
 function effortFromBudget(budget) {
   if (typeof budget !== 'number' || !Number.isFinite(budget)) return 'high'
   if (budget <= 2048) return 'low'
@@ -459,6 +514,7 @@ export function apply(ctx, config) {
     settingsPath: ['providerTypes'],
   }])
   installClaudeModelInfoDefaults(ctx, providerTypes)
+  installForceAdaptiveThinking(ctx, providerTypes)
   installClaudeModelDiscovery(ctx)
   const storage = new AsyncLocalStorage()
   const upstreamFetch = globalThis.fetch

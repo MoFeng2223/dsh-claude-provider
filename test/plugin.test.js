@@ -6,10 +6,12 @@ import {
   CLAUDE_PROVIDER_DIRECTORY_SENTINEL,
   discoverAnthropicModels,
   isClaudeProviderType,
+  piModelHasAdaptiveEfforts,
   readAnthropicModelPage,
   rewriteAnthropicPayload,
   shouldUseAdaptiveThinking,
   withClaudeProviderReasoningDefaults,
+  withForcedAdaptiveThinking,
 } from '../src/index.js'
 
 test('recognizes only provider ids explicitly registered under the Claude provider type', () => {
@@ -177,6 +179,26 @@ test('distinguishes adaptive effort profiles from legacy on/off profiles', () =>
   assert.equal(shouldUseAdaptiveThinking(info(['low', 'medium', 'high', 'max'])), true)
   assert.equal(shouldUseAdaptiveThinking(info(['low', 'medium', 'high', 'xhigh', 'max'])), true)
   assert.equal(shouldUseAdaptiveThinking(info(['off', 'high'])), false)
+})
+
+test('stamps forceAdaptiveThinking only on typed Claude routes with four-plus efforts', () => {
+  const settings = { providerTypes: { tianshu: 'claude-adaptive' } }
+  const opus = {
+    id: 'claude-opus-4-6',
+    thinkingLevelMap: { low: 'low', medium: 'medium', high: 'high', max: 'max', xhigh: null, off: null },
+  }
+  const haiku = {
+    id: 'claude-haiku-4-5',
+    thinkingLevelMap: { off: null, high: 'high', low: null, medium: null, max: null },
+  }
+  assert.equal(piModelHasAdaptiveEfforts(opus), true)
+  assert.equal(piModelHasAdaptiveEfforts(haiku), false)
+  assert.equal(withForcedAdaptiveThinking(opus, 'generic', settings), opus)
+  assert.equal(withForcedAdaptiveThinking(haiku, 'tianshu', settings), haiku)
+  assert.deepEqual(withForcedAdaptiveThinking(opus, 'tianshu', settings), {
+    ...opus,
+    compat: { forceAdaptiveThinking: true },
+  })
 })
 
 test('builds the native Anthropic models endpoint from Messages base URLs', () => {
