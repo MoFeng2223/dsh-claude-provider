@@ -46,6 +46,36 @@ replaceOnce(
 )
 
 replaceOnce(
+  'native RC8 Claude profile helper',
+  '\t\tfunction isClaudeProvider(row, state) {',
+  `\t\tfunction withNativeClaudeModel(model) {
+\t\t\tconst next = withDefaultClaudeReasoning(model);
+\t\t\tconst efforts = next.reasoningEfforts;
+\t\t\tconst adaptive = efforts !== null && typeof efforts === "object" && !Array.isArray(efforts)
+\t\t\t\t&& ["low", "medium", "high", "max"].every((level) => typeof efforts[level] === "string" && efforts[level].length > 0);
+\t\t\tconst compat = { ...(next.compat ?? {}) };
+\t\t\tif (adaptive) compat.forceAdaptiveThinking = true;
+\t\t\telse Reflect.deleteProperty(compat, "forceAdaptiveThinking");
+\t\t\tconst { compat: _compat, ...rest } = next;
+\t\t\treturn { ...rest, ...Object.keys(compat).length === 0 ? {} : { compat } };
+\t\t}
+\t\tfunction withNativeClaudeProfile(profile) {
+\t\t\tconst { compat: currentCompat, ...rest } = profile ?? {};
+\t\t\tconst compat = { ...(currentCompat ?? {}) };
+\t\t\tReflect.deleteProperty(compat, "forceAdaptiveThinking");
+\t\t\tconst models = Array.isArray(profile?.models) ? profile.models.map(withNativeClaudeModel) : profile?.models;
+\t\t\treturn {
+\t\t\t\t...rest,
+\t\t\t\tapi: "anthropic-messages",
+\t\t\t\t...Object.keys(compat).length === 0 ? {} : { compat },
+\t\t\t\t...models === void 0 ? {} : { models },
+\t\t\t\treasoning: "high"
+\t\t\t};
+\t\t}
+\t\tfunction isClaudeProvider(row, state) {`,
+)
+
+replaceOnce(
   'hide Claude provider type directory sentinel',
   '\t\t\t\t\tproviders = providersResponse.result.value.providers;',
   '\t\t\t\t\tproviders = providersResponse.result.value.providers.filter((entry) => entry.provider !== CLAUDE_PROVIDER_DIRECTORY_SENTINEL);',
@@ -161,7 +191,13 @@ replaceOnce(
 replaceOnce(
   'Claude profile serialization',
   '\t\t\t\t\t\tapi: protocol,\n\t\t\t\t\t\tbaseURL,\n\t\t\t\t\t\tmodels: models.map((model) => ({ ...model }))',
-  '\t\t\t\t\t\tapi: isAdaptiveClaude ? "anthropic-messages" : protocol,\n\t\t\t\t\t\tbaseURL,\n\t\t\t\t\t\tmodels: models.map((model) => isAdaptiveClaude ? withDefaultClaudeReasoning(model) : { ...model }),\n\t\t\t\t\t\t...isAdaptiveClaude ? { reasoning: "high" } : {}',
+  '\t\t\t\t\t\tapi: isAdaptiveClaude ? "anthropic-messages" : protocol,\n\t\t\t\t\t\tbaseURL,\n\t\t\t\t\t\tmodels: models.map((model) => isAdaptiveClaude ? withNativeClaudeModel(model) : { ...model }),\n\t\t\t\t\t\t...isAdaptiveClaude ? { reasoning: "high" } : {}',
+)
+
+replaceOnce(
+  'existing Claude profile serialization',
+  '\t\t\t\tconst next = layout === "pi-ai" && stringAt(draft, "apiKeyEnv") === void 0 && stringAt(fallback, "apiKeyEnv") === void 0 && keyValue.length > 0 ? schema.setPath(draft, ["apiKeyEnv"], keyRef) : draft;',
+  '\t\t\t\tconst credentialDraft = layout === "pi-ai" && stringAt(draft, "apiKeyEnv") === void 0 && stringAt(fallback, "apiKeyEnv") === void 0 && keyValue.length > 0 ? schema.setPath(draft, ["apiKeyEnv"], keyRef) : draft;\n\t\t\t\tconst next = props.thinkingPresets === true ? withNativeClaudeProfile(credentialDraft) : credentialDraft;',
 )
 
 replaceOnce(
@@ -178,8 +214,8 @@ replaceOnce(
 
 replaceOnce(
   'remove persisted Claude provider type',
-  '\t\t\t\tif (!response.result.ok) return response.result.error.message;\n\t\t\t} catch (error) {\n\t\t\t\treturn messageOf$1(error);',
-  '\t\t\t\tif (!response.result.ok) return response.result.error.message;\n\t\t\t\tconst typeResponse = await api.settings.mutate({\n\t\t\t\t\tns: CLAUDE_PROVIDER_SETTINGS_NS,\n\t\t\t\t\tops: [{ op: "unset", path: ["providerTypes", target.provider] }]\n\t\t\t\t});\n\t\t\t\tif (!typeResponse.result.ok) return typeResponse.result.error.message;\n\t\t\t} catch (error) {\n\t\t\t\treturn messageOf$1(error);',
+  '\t\t\t\tif (!response.result.ok) return response.result.error.message;\n\t\t\t} catch (error) {\n\t\t\t\treturn messageOf(error);',
+  '\t\t\t\tif (!response.result.ok) return response.result.error.message;\n\t\t\t\tconst typeResponse = await api.settings.mutate({\n\t\t\t\t\tns: CLAUDE_PROVIDER_SETTINGS_NS,\n\t\t\t\t\tops: [{ op: "unset", path: ["providerTypes", target.provider] }]\n\t\t\t\t});\n\t\t\t\tif (!typeResponse.result.ok) return typeResponse.result.error.message;\n\t\t\t} catch (error) {\n\t\t\t\treturn messageOf(error);',
 )
 
 replaceOnce(
@@ -201,20 +237,21 @@ replaceOnce(
 )
 
 replaceOnce(
+  'existing Claude protocol lock',
+  '\t\t\t\t\t\t\t\t\t"aria-label": t("customApi"),\n\t\t\t\t\t\t\t\t\tdisabled,\n\t\t\t\t\t\t\t\t\tonChange: (event) => {\n\t\t\t\t\t\t\t\t\t\tsetField("api", event.target.value);',
+  '\t\t\t\t\t\t\t\t\t"aria-label": t("customApi"),\n\t\t\t\t\t\t\t\t\tdisabled: disabled || props.thinkingPresets === true,\n\t\t\t\t\t\t\t\t\tonChange: (event) => {\n\t\t\t\t\t\t\t\t\t\tsetField("api", event.target.value);',
+)
+
+replaceOnce(
   'row Claude fact',
   '\t\t\t\t\t\t\tconst credentialConfigured = row.credential?.configured === true;',
   '\t\t\t\t\t\t\tconst adaptiveClaude = isClaudeProvider(row, state);\n\t\t\t\t\t\t\tconst credentialConfigured = row.credential?.configured === true;',
 )
 
-source = source.replaceAll(
-  '\t\t\t\t\t\t\t\ttarget,\n\t\t\t\t\t\t\t\tnamespace,\n\t\t\t\t\t\t\t\tapi,',
-  '\t\t\t\t\t\t\t\ttarget,\n\t\t\t\t\t\t\t\tnamespace,\n\t\t\t\t\t\t\t\tthinkingPresets: isClaudeProvider(row, state),\n\t\t\t\t\t\t\t\tapi,',
-)
-
 replaceExactly(
   'existing provider editors Claude type',
-  '\t\t\t\t\t\t\t\t\ttarget,\n\t\t\t\t\t\t\t\t\tnamespace,\n\t\t\t\t\t\t\t\t\tapi,\n\t\t\t\t\t\t\t\t\tt,\n\t\t\t\t\t\t\t\t\treadOnly:',
-  '\t\t\t\t\t\t\t\t\ttarget,\n\t\t\t\t\t\t\t\t\tnamespace,\n\t\t\t\t\t\t\t\t\tthinkingPresets: isClaudeProvider(row, state),\n\t\t\t\t\t\t\t\t\tapi,\n\t\t\t\t\t\t\t\t\tt,\n\t\t\t\t\t\t\t\t\treadOnly:',
+  '\t\t\t\t\t\t\t\t\ttarget,\n\t\t\t\t\t\t\t\t\tnamespace,\n\t\t\t\t\t\t\t\t\tschema,\n\t\t\t\t\t\t\t\t\tapi,\n\t\t\t\t\t\t\t\t\tt,\n\t\t\t\t\t\t\t\t\treadOnly:',
+  '\t\t\t\t\t\t\t\t\ttarget,\n\t\t\t\t\t\t\t\t\tnamespace,\n\t\t\t\t\t\t\t\t\tschema,\n\t\t\t\t\t\t\t\t\tthinkingPresets: isClaudeProvider(row, state),\n\t\t\t\t\t\t\t\t\tapi,\n\t\t\t\t\t\t\t\t\tt,\n\t\t\t\t\t\t\t\t\treadOnly:',
   2,
 )
 
@@ -286,13 +323,13 @@ replaceOnce(
 replaceOnce(
   'English Claude copy',
   '\t\t\tcustomTitle: "Custom provider",\n\t\t\tcustomTag: "Custom",',
-  '\t\t\tcustomTitle: "Custom provider",\n\t\t\tcustomTag: "Custom",\n\t\t\tclaudeCustomAdd: "Add Claude provider",\n\t\t\tclaudeCustomTitle: "Claude provider",\n\t\t\tclaudeTypeUnavailable: "Claude provider type storage is unavailable.",\n\t\t\tclaudeTypeTag: "Claude provider",\n\t\t\tclaudeTypeIntro: "Only this provider type enables Claude model discovery, recorded capacities, thinking modes, and adaptive request conversion.",\n\t\t\tadaptiveClaudeEnabled: "Choose a thinking mode for each model. New models default to five levels.",\n\t\t\tadaptiveClaudeHelpLabel: "Thinking mode help",\n\t\t\tadaptiveClaudeHelp: "Five (low / medium / high / xhigh / max): Fable 5, Opus 5, Opus 4.8, Opus 4.7, Sonnet 5\\nFour (low / medium / high / max): Opus 4.6, Sonnet 4.6\\nOn / Off: Haiku 4.5",\n\t\t\tadaptiveClaudeTag: "Claude configured",\n\t\t\tthinkingPreset: "Thinking mode",\n\t\t\tthinkingPresetToggle: "On / Off",\n\t\t\tthinkingPresetFour: "Four levels",\n\t\t\tthinkingPresetFive: "Five levels (default)",',
+  '\t\t\tcustomTitle: "Custom provider",\n\t\t\tcustomTag: "Custom",\n\t\t\tclaudeCustomAdd: "Add Claude provider",\n\t\t\tclaudeCustomTitle: "Claude provider",\n\t\t\tclaudeTypeUnavailable: "Claude provider type storage is unavailable.",\n\t\t\tclaudeTypeTag: "Claude provider",\n\t\t\tclaudeTypeIntro: "This provider type saves native RC8 adaptive-thinking compatibility, model reasoning mappings, Claude model discovery, and recorded capacities.",\n\t\t\tadaptiveClaudeEnabled: "Choose a thinking mode for each model; new models default to five levels.",\n\t\t\tadaptiveClaudeHelpLabel: "Thinking mode help",\n\t\t\tadaptiveClaudeHelp: "Five (low / medium / high / xhigh / max): Fable 5, Opus 5, Opus 4.8, Opus 4.7, Sonnet 5\\nFour (low / medium / high / max): Opus 4.6, Sonnet 4.6\\nOn / Off: Haiku 4.5",\n\t\t\tadaptiveClaudeTag: "Claude configured",\n\t\t\tthinkingPreset: "Thinking mode",\n\t\t\tthinkingPresetToggle: "On / Off",\n\t\t\tthinkingPresetFour: "Four levels",\n\t\t\tthinkingPresetFive: "Five levels (default)",',
 )
 
 replaceOnce(
   'Chinese Claude copy',
   '\t\t\tcustomTitle: "自定义提供方",\n\t\t\tcustomTag: "自定义",',
-  '\t\t\tcustomTitle: "自定义提供方",\n\t\t\tcustomTag: "自定义",\n\t\t\tclaudeCustomAdd: "添加 Claude 提供方",\n\t\t\tclaudeCustomTitle: "Claude 提供方",\n\t\t\tclaudeTypeUnavailable: "Claude 提供方类型存储不可用。",\n\t\t\tclaudeTypeTag: "Claude 提供方",\n\t\t\tclaudeTypeIntro: "只有此提供方类型会启用 Claude 模型发现、已记录容量、思考模式和 adaptive 请求转换。",\n\t\t\tadaptiveClaudeEnabled: "每个模型可单独选择思考模式；新增模型默认使用五档。",\n\t\t\tadaptiveClaudeHelpLabel: "思考模式说明",\n\t\t\tadaptiveClaudeHelp: "五档（低 / 中 / 高 / 超高 / 最大）：Fable 5、Opus 5、Opus 4.8、Opus 4.7、Sonnet 5\\n四档（低 / 中 / 高 / 最大）：Opus 4.6、Sonnet 4.6\\n开启 / 关闭：Haiku 4.5",\n\t\t\tadaptiveClaudeTag: "Claude 已适配",\n\t\t\tthinkingPreset: "思考模式",\n\t\t\tthinkingPresetToggle: "开启 / 关闭",\n\t\t\tthinkingPresetFour: "四档",\n\t\t\tthinkingPresetFive: "五档（默认）",',
+  '\t\t\tcustomTitle: "自定义提供方",\n\t\t\tcustomTag: "自定义",\n\t\t\tclaudeCustomAdd: "添加 Claude 提供方",\n\t\t\tclaudeCustomTitle: "Claude 提供方",\n\t\t\tclaudeTypeUnavailable: "Claude 提供方类型存储不可用。",\n\t\t\tclaudeTypeTag: "Claude 提供方",\n\t\t\tclaudeTypeIntro: "此提供方类型会写入 RC8 原生自适应思考兼容配置、模型思考映射、Claude 模型发现和已记录容量。",\n\t\t\tadaptiveClaudeEnabled: "每个模型可单独选择思考模式，新增模型默认使用五档。",\n\t\t\tadaptiveClaudeHelpLabel: "思考模式说明",\n\t\t\tadaptiveClaudeHelp: "五档（低 / 中 / 高 / 超高 / 最大）：Fable 5、Opus 5、Opus 4.8、Opus 4.7、Sonnet 5\\n四档（低 / 中 / 高 / 最大）：Opus 4.6、Sonnet 4.6\\n开启 / 关闭：Haiku 4.5",\n\t\t\tadaptiveClaudeTag: "Claude 已适配",\n\t\t\tthinkingPreset: "思考模式",\n\t\t\tthinkingPresetToggle: "开启 / 关闭",\n\t\t\tthinkingPresetFour: "四档",\n\t\t\tthinkingPresetFive: "五档（默认）",',
 )
 
 await mkdir(dirname(outputPath), { recursive: true })

@@ -2,7 +2,11 @@
 
 English | [简体中文](./README.zh-CN.md)
 
-DeepSeek Harness's generic reasoning controls do not fully match the request parameters expected by newer Claude models. A selected level can therefore fail with HTTP 400, or be silently mapped to another effective level, such as Max behaving as High. `@mofeng2223/dsh-claude-provider` adds an explicit Claude provider type and sends the reasoning parameters that each configured Claude model expects.
+~~DeepSeek Harness's general-purpose reasoning controls did not fully match the request parameters required by newer Claude models. As a result, selecting a reasoning level could either produce an HTTP 400 error or be silently mapped by the adapter to a different effective level—for example, Max in the interface could actually be sent as High. `@mofeng2223/dsh-claude-provider` added an explicit Claude provider type and sent the correct reasoning parameters for each Claude model.~~
+
+DeepSeek Harness 0.1.0-rc.8 now supports reasoning-effort parameters for Claude models, but they still need to be configured manually in `settings.yaml`. Therefore, this plugin no longer intercepts or rewrites model requests at runtime. Instead, it writes the corresponding native settings to `settings.yaml` when a Claude provider is saved through the front end.
+
+The plugin retains its dedicated Claude provider configuration page, so users do not need to edit `settings.yaml` manually. Anthropic-native model discovery, automatic defaults for common Claude models, and other features not yet available in DeepSeek Harness are also retained.
 
 ## What this plugin does
 
@@ -28,7 +32,11 @@ DeepSeek Harness's generic reasoning controls do not fully match the request par
    - Four levels: Low, Medium, High, and Max
    - Toggle: On or Off
 
-   New models default to five levels. Claude providers default to High, while toggle-only models default to On. For adaptive-thinking models, the plugin converts the selection to Claude's `thinking.type: adaptive` and `output_config.effort` request format instead of allowing the adapter to collapse or reject the selected level.
+   New models default to five levels, and Claude providers default to High.
+
+   ~~For adaptive thinking models, the plugin converted the selected level into Claude's `thinking.type: adaptive` and `output_config.effort` request format, preventing adapter rejections or silent downgrades.~~
+
+   For adaptive thinking models, the plugin writes the selected level to DSH's native configuration when saved.
 
 <p align="center">
   <img src="./docs/images/model-defaults.en.jpg" alt="Claude model capacity defaults and reasoning modes" width="580">
@@ -42,9 +50,9 @@ DeepSeek Harness's generic reasoning controls do not fully match the request par
 
    When a discovered model matches a recorded Claude model ID, the plugin automatically fills its context window, maximum output length, and reasoning-mode set. Models entered manually remain fully editable and are not overwritten by this lookup.
 
-5. **Leaves every other provider unchanged**
+5. **Uses native RC8 settings without request rewriting**
 
-   All discovery, defaults, reasoning controls, and request rewriting are limited to Provider IDs explicitly created as **Claude Providers**. DeepSeek Harness's built-in providers and ordinary custom providers keep their original behavior, even when they use `anthropic-messages` or expose a `claude-*` model ID.
+   Discovery, defaults, and reasoning controls are limited to Provider IDs explicitly created as **Claude Providers**. The saved provider remains a standard `llm-pi-ai` route; the plugin neither replaces global `fetch` nor modifies RC8's model adapter.
 
 ## Install
 
@@ -98,7 +106,7 @@ npx @deepseek-ai/dsh plugin --profile web remove @mofeng2223/dsh-claude-provider
 npx @deepseek-ai/dsh plugin --profile headless remove @mofeng2223/dsh-claude-provider
 ```
 
-Uninstalling the plugin does not delete `~/.dsh/settings.yaml` or stored credentials. Existing Claude providers remain configured as ordinary custom `anthropic-messages` routes, but lose the Claude-specific interface, model discovery, defaults, reasoning controls, and adaptive request conversion supplied by this plugin.
+Uninstalling the plugin does not delete `~/.dsh/settings.yaml` or stored credentials. Existing Claude providers remain ordinary custom `anthropic-messages` routes. Their `reasoningEfforts`, default `reasoning`, and `compat.forceAdaptiveThinking` fields are native RC8 settings, so adaptive thinking and the front-end reasoning-effort selector continue to work. Only the dedicated Claude add/edit UI, model discovery, and recorded defaults disappear.
 
 ## License
 
