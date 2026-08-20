@@ -50,9 +50,9 @@ The plugin retains its dedicated Claude provider configuration page, so users do
 
    When a discovered model matches a recorded Claude model ID, the plugin automatically fills its context window, maximum output length, and reasoning-mode set. Models entered manually remain fully editable and are not overwritten by this lookup.
 
-5. **Uses native RC8 settings without request rewriting**
+5. **Leaves every other provider unchanged**
 
-   Discovery, defaults, and reasoning controls are limited to Provider IDs explicitly created as **Claude Providers**. The saved provider remains a standard `llm-pi-ai` route; the plugin neither replaces global `fetch` nor modifies RC8's model adapter.
+   Discovery, defaults, and reasoning controls are limited to Provider IDs explicitly created as **Claude Providers**. DeepSeek Harness's built-in providers and ordinary custom providers keep their original behavior, even when they use `anthropic-messages` or expose a `claude-*` model ID.
 
 ## Install
 
