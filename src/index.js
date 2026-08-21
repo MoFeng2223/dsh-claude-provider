@@ -1,11 +1,10 @@
 import z from '@deepseek-ai/schemastery'
-import { settingsNamespace } from '@deepseek-ai/dsh-settings'
 
 export const name = 'claude-provider'
 export const inject = ['llm', 'settings']
 
 export const CLAUDE_PROVIDER_TYPE = 'claude-adaptive'
-export const CLAUDE_PROVIDER_SETTINGS_NS = settingsNamespace('dsh-claude-provider')
+export const CLAUDE_PROVIDER_SETTINGS_NS = 'dsh-claude-provider'
 export const CLAUDE_PROVIDER_DIRECTORY_SENTINEL = 'dsh-claude-provider-type'
 
 const ProviderTypeSettings = z.object({

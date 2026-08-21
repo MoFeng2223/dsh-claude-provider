@@ -4,7 +4,7 @@ English | [简体中文](./README.zh-CN.md)
 
 ~~DeepSeek Harness's general-purpose reasoning controls did not fully match the request parameters required by newer Claude models. As a result, selecting a reasoning level could either produce an HTTP 400 error or be silently mapped by the adapter to a different effective level—for example, Max in the interface could actually be sent as High. `@mofeng2223/dsh-claude-provider` added an explicit Claude provider type and sent the correct reasoning parameters for each Claude model.~~
 
-DeepSeek Harness 0.1.0-rc.8 now supports reasoning-effort parameters for Claude models, but they still need to be configured manually in `settings.yaml`. Therefore, this plugin no longer intercepts or rewrites model requests at runtime. Instead, it writes the corresponding native settings to `settings.yaml` when a Claude provider is saved through the front end.
+DeepSeek Harness 0.1.1-rc.1 now supports reasoning-effort parameters for Claude models, but they still need to be configured manually in `settings.yaml`. Therefore, this plugin no longer intercepts or rewrites model requests at runtime. Instead, it writes the corresponding native settings to `settings.yaml` when a Claude provider is saved through the front end.
 
 The plugin retains its dedicated Claude provider configuration page, so users do not need to edit `settings.yaml` manually. Anthropic-native model discovery, automatic defaults for common Claude models, and other features not yet available in DeepSeek Harness are also retained.
 

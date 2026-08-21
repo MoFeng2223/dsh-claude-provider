@@ -34,6 +34,12 @@ function replaceExactly(label, before, after, expected) {
 source = source.replaceAll('@deepseek-ai/dsh-client-ui-settings-models', '@mofeng2223/dsh-claude-provider')
 
 replaceOnce(
+  'RC8 credential update compatibility',
+  '\t\t\t\t\tctx.remote.$on("credentials/reference-updated", refreshModels),',
+  '\t\t\t\t\tctx.remote.$on("credentials/reference-updated", refreshModels),\n\t\t\t\t\tctx.remote.$on("credentials/updated", refreshModels),',
+)
+
+replaceOnce(
   'Claude model helpers',
   '\t\t/** Stable visible and accessible identity for one provider target. */',
   `\t\tconst CLAUDE_DISCOVERY_API = "mofeng-anthropic-models";\n\t\tconst CLAUDE_FIVE_EFFORTS = Object.freeze({ low: "low", medium: "medium", high: "high", xhigh: "xhigh", max: "max" });\n\t\tconst CLAUDE_FOUR_EFFORTS = Object.freeze({ low: "low", medium: "medium", high: "high", max: "max" });\n\t\tconst CLAUDE_TOGGLE_EFFORTS = Object.freeze({ off: null, high: "high" });\n\t\tfunction reasoningEffortsForPreset(preset) {\n\t\t\tif (preset === "toggle") return { ...CLAUDE_TOGGLE_EFFORTS };\n\t\t\tif (preset === "four") return { ...CLAUDE_FOUR_EFFORTS };\n\t\t\treturn { ...CLAUDE_FIVE_EFFORTS };\n\t\t}\n\t\tfunction thinkingPresetOf(model) {\n\t\t\tconst efforts = model?.reasoningEfforts;\n\t\t\tif (efforts !== null && typeof efforts === "object" && !Array.isArray(efforts)) {\n\t\t\t\tif (Object.hasOwn(efforts, "off") && !Object.hasOwn(efforts, "low")) return "toggle";\n\t\t\t\tif (Object.hasOwn(efforts, "max") && !Object.hasOwn(efforts, "xhigh")) return "four";\n\t\t\t}\n\t\t\treturn "five";\n\t\t}\n\t\tfunction withDefaultClaudeReasoning(model) {\n\t\t\tconst efforts = model?.reasoningEfforts;\n\t\t\treturn efforts !== null && typeof efforts === "object" && !Array.isArray(efforts) && Object.keys(efforts).length > 0\n\t\t\t\t? { ...model }\n\t\t\t\t: { ...model, reasoningEfforts: reasoningEffortsForPreset("five") };\n\t\t}\n\t\tfunction isClaudeProvider(row, state) {\n\t\t\tif (row.entry.settingsNs !== "llm-pi-ai") return false;\n\t\t\tconst namespace = state.namespaces.get("llm-pi-ai");\n\t\t\tif (namespace === void 0) return false;\n\t\t\tconst profile = (0, _deepseek_ai_dsh_client_schema_form.getPath)(namespace.value, row.entry.settingsPath);\n\t\t\treturn profile !== null && typeof profile === "object" && profile.api === "anthropic-messages" && Array.isArray(profile.models) && profile.models.length > 0;\n\t\t}\n\t\t/** Stable visible and accessible identity for one provider target. */`,

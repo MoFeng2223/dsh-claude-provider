@@ -11,14 +11,22 @@ import {
 } from '../src/index.js'
 
 const builtClient = readFileSync(new URL('../lib/client.js', import.meta.url), 'utf8')
+const packageManifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
 
-test('RC8 client writes native adaptive-thinking settings without RC7 externals', () => {
+test('client writes native adaptive-thinking settings without legacy externals', () => {
   assert.match(builtClient, /if \(adaptive\) compat\.forceAdaptiveThinking = true/)
   assert.match(builtClient, /Reflect\.deleteProperty\(compat, "forceAdaptiveThinking"\)/)
   assert.match(builtClient, /withNativeClaudeProfile\(credentialDraft\)/)
   assert.match(builtClient, /reasoningEfforts: reasoningEffortsForPreset/)
   assert.doesNotMatch(builtClient, /require\("@deepseek-ai\/dsh-client-web-react"\)/)
   assert.doesNotMatch(builtClient, /require\("@deepseek-ai\/dsh-client-schema-form"\)/)
+})
+
+test('builds on DSH 0.1.1 while retaining the RC8 credential refresh event', () => {
+  assert.equal(packageManifest.devDependencies['@deepseek-ai/dsh-client-ui-settings-models'], '0.1.1-rc.1')
+  assert.equal(packageManifest.dependencies['@deepseek-ai/dsh-settings'], undefined)
+  assert.match(builtClient, /ctx\.remote\.\$on\("credentials\/reference-updated", refreshModels\)/)
+  assert.match(builtClient, /ctx\.remote\.\$on\("credentials\/updated", refreshModels\)/)
 })
 
 test('recognizes only provider ids explicitly registered under the Claude provider type', () => {
