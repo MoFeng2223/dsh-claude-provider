@@ -46,9 +46,15 @@ replaceOnce(
 )
 
 replaceOnce(
+  'custom Claude uses native Anthropic discovery',
+  '\t\t\t\t\t\t...probe.api === void 0 ? {} : { api: probe.api },',
+  '\t\t\t\t\t\t...probe.api === void 0 ? {} : { api: props.thinkingPresets ? CLAUDE_DISCOVERY_API : probe.api },',
+)
+
+replaceOnce(
   'Claude provider type constants',
   '\t\tconst CLAUDE_DISCOVERY_API = "mofeng-anthropic-models";',
-  '\t\tconst CLAUDE_DISCOVERY_API = "mofeng-anthropic-models";\n\t\tconst CLAUDE_PROVIDER_SETTINGS_NS = "dsh-claude-provider";\n\t\tconst CLAUDE_PROVIDER_TYPE = "claude-adaptive";\n\t\tconst CLAUDE_PROVIDER_DIRECTORY_SENTINEL = "dsh-claude-provider-type";',
+  '\t\tconst CLAUDE_DISCOVERY_API = "mofeng-anthropic-models";\n\t\tconst CLAUDE_PROVIDER_SETTINGS_NS = "dsh-claude-provider";\n\t\tconst CLAUDE_PROVIDER_TYPE = "claude-adaptive";',
 )
 
 replaceOnce(
@@ -81,11 +87,6 @@ replaceOnce(
 \t\tfunction isClaudeProvider(row, state) {`,
 )
 
-replaceOnce(
-  'hide Claude provider type directory sentinel',
-  '\t\t\t\t\tproviders = providersResponse.result.value.providers;',
-  '\t\t\t\t\tproviders = providersResponse.result.value.providers.filter((entry) => entry.provider !== CLAUDE_PROVIDER_DIRECTORY_SENTINEL);',
-)
 
 replaceOnce(
   'persisted Claude provider type lookup',
@@ -182,11 +183,6 @@ replaceOnce(
 \t\tfunction isClaudeProvider(row, state) {`,
 )
 
-replaceOnce(
-  'custom Claude uses native Anthropic discovery',
-  '\t\t\t\t\t\t...probe.api === void 0 ? {} : { api: probe.api },',
-  '\t\t\t\t\t\t...probe.api === void 0 ? {} : { api: props.thinkingPresets ? CLAUDE_DISCOVERY_API : probe.api },',
-)
 
 replaceOnce(
   'provider type state',
@@ -214,14 +210,14 @@ replaceOnce(
 
 replaceOnce(
   'persist Claude provider type after profile creation',
-  '\t\t\t\tif (storesKey) {\n\t\t\t\t\tconst stored = await api.credentials.set({',
-  '\t\t\t\tif (isAdaptiveClaude) {\n\t\t\t\t\tconst typed = await api.settings.mutate({\n\t\t\t\t\t\tns: CLAUDE_PROVIDER_SETTINGS_NS,\n\t\t\t\t\t\tops: [{ op: "set", path: ["providerTypes", route], value: CLAUDE_PROVIDER_TYPE }]\n\t\t\t\t\t});\n\t\t\t\t\tif (!typed.result.ok) return typed.result.error.message;\n\t\t\t\t}\n\t\t\t\tif (storesKey) {\n\t\t\t\t\tconst stored = await api.credentials.set({',
+  '\t\t\t\tif (storesKey) {\n\t\t\t\t\tconst stored = await operations.storeCredential(keyRef, keyValue);',
+  '\t\t\t\tif (isAdaptiveClaude) {\n\t\t\t\t\tconst typed = await operations.writeSettings(CLAUDE_PROVIDER_SETTINGS_NS, [{\n\t\t\t\t\t\top: "set",\n\t\t\t\t\t\tpath: ["providerTypes", route],\n\t\t\t\t\t\tvalue: CLAUDE_PROVIDER_TYPE\n\t\t\t\t\t}], void 0);\n\t\t\t\t\tif (typed.kind !== "written") return typed.kind === "conflict" ? t("conflict") : typed.message;\n\t\t\t\t}\n\t\t\t\tif (storesKey) {\n\t\t\t\t\tconst stored = await operations.storeCredential(keyRef, keyValue);',
 )
 
 replaceOnce(
   'remove persisted Claude provider type',
-  '\t\t\t\tif (!response.result.ok) return response.result.error.message;\n\t\t\t} catch (error) {\n\t\t\t\treturn messageOf(error);',
-  '\t\t\t\tif (!response.result.ok) return response.result.error.message;\n\t\t\t\tconst typeResponse = await api.settings.mutate({\n\t\t\t\t\tns: CLAUDE_PROVIDER_SETTINGS_NS,\n\t\t\t\t\tops: [{ op: "unset", path: ["providerTypes", target.provider] }]\n\t\t\t\t});\n\t\t\t\tif (!typeResponse.result.ok) return typeResponse.result.error.message;\n\t\t\t} catch (error) {\n\t\t\t\treturn messageOf(error);',
+  '\t\t\t}], void 0);\n\t\t\tif (written.kind !== "written") return written.message;\n\t\t\tawait controller.load();',
+  '\t\t\t}], void 0);\n\t\t\tif (written.kind !== "written") return written.message;\n\t\t\tconst typedRemoval = await operations.writeSettings(CLAUDE_PROVIDER_SETTINGS_NS, [{\n\t\t\t\top: "unset",\n\t\t\t\tpath: ["providerTypes", target.provider]\n\t\t\t}], void 0);\n\t\t\tif (typedRemoval.kind !== "written") return typedRemoval.message;\n\t\t\tawait controller.load();',
 )
 
 replaceOnce(
@@ -254,17 +250,22 @@ replaceOnce(
   '\t\t\t\t\t\t\tconst adaptiveClaude = isClaudeProvider(row, state);\n\t\t\t\t\t\t\tconst credentialConfigured = row.credential?.configured === true;',
 )
 
-replaceExactly(
-  'existing provider editors Claude type',
-  '\t\t\t\t\t\t\t\t\ttarget,\n\t\t\t\t\t\t\t\t\tnamespace,\n\t\t\t\t\t\t\t\t\tschema,\n\t\t\t\t\t\t\t\t\tapi,\n\t\t\t\t\t\t\t\t\tt,\n\t\t\t\t\t\t\t\t\treadOnly:',
-  '\t\t\t\t\t\t\t\t\ttarget,\n\t\t\t\t\t\t\t\t\tnamespace,\n\t\t\t\t\t\t\t\t\tschema,\n\t\t\t\t\t\t\t\t\tthinkingPresets: isClaudeProvider(row, state),\n\t\t\t\t\t\t\t\t\tapi,\n\t\t\t\t\t\t\t\t\tt,\n\t\t\t\t\t\t\t\t\treadOnly:',
-  2,
+replaceOnce(
+  'setup-card provider editor Claude type',
+  '\ttarget,\n\t\t\t\t\t\t\t\t\tnamespace,\n\t\t\t\t\t\t\t\t\tschema,\n\t\t\t\t\t\t\t\t\toperations,\n\t\t\t\t\t\t\t\t\tt,\n\t\t\t\t\t\t\t\t\treadOnly:',
+  '\ttarget,\n\t\t\t\t\t\t\t\t\tnamespace,\n\t\t\t\t\t\t\t\t\tschema,\n\t\t\t\t\t\t\t\t\tthinkingPresets: isClaudeProvider(row, state),\n\t\t\t\t\t\t\t\t\toperations,\n\t\t\t\t\t\t\t\t\tt,\n\t\t\t\t\t\t\t\t\treadOnly:',
+)
+
+replaceOnce(
+  'open provider editor Claude type',
+  '\ttarget,\n\t\t\t\t\t\t\t\t\t\tnamespace,\n\t\t\t\t\t\t\t\t\t\tschema,\n\t\t\t\t\t\t\t\t\t\toperations,\n\t\t\t\t\t\t\t\t\t\tt,\n\t\t\t\t\t\t\t\t\t\treadOnly:',
+  '\ttarget,\n\t\t\t\t\t\t\t\t\t\tnamespace,\n\t\t\t\t\t\t\t\t\t\tschema,\n\t\t\t\t\t\t\t\t\t\tthinkingPresets: isClaudeProvider(row, state),\n\t\t\t\t\t\t\t\t\t\toperations,\n\t\t\t\t\t\t\t\t\t\tt,\n\t\t\t\t\t\t\t\t\t\treadOnly:',
 )
 
 replaceOnce(
   'row Claude badge',
-  '\t\t\t\t\t\t\t\t\t\t\t}) : null,\n\t\t\t\t\t\t\t\t\t\t\tcredentialConfigured ?',
-  '\t\t\t\t\t\t\t\t\t\t\t}) : null,\n\t\t\t\t\t\t\t\t\t\t\tadaptiveClaude ? (0, react_jsx_runtime.jsx)("span", {\n\t\t\t\t\t\t\t\t\t\t\t\tclassName: ModelsSection_module_css_default["rowTag"],\n\t\t\t\t\t\t\t\t\t\t\t\tchildren: t("adaptiveClaudeTag")\n\t\t\t\t\t\t\t\t\t\t\t}) : null,\n\t\t\t\t\t\t\t\t\t\t\tcredentialConfigured ?',
+  'children: t("customTag")\n\t\t\t\t\t\t\t\t\t\t\t\t}) : null,\n\t\t\t\t\t\t\t\t\t\t\t\tcredentialConfigured ?',
+  'children: t("customTag")\n\t\t\t\t\t\t\t\t\t\t\t\t}) : null,\n\t\t\t\t\t\t\t\t\t\t\t\tadaptiveClaude ? (0, react_jsx_runtime.jsx)("span", {\n\t\t\t\t\t\t\t\t\t\t\t\t\tclassName: ModelsSection_module_css_default["rowTag"],\n\t\t\t\t\t\t\t\t\t\t\t\t\tchildren: t("adaptiveClaudeTag")\n\t\t\t\t\t\t\t\t\t\t\t\t}) : null,\n\t\t\t\t\t\t\t\t\t\t\t\tcredentialConfigured ?',
 )
 
 source = source.replaceAll('children: t("adaptiveClaudeTag")', 'children: t("claudeTypeTag")')
@@ -289,14 +290,14 @@ replaceOnce(
 
 replaceOnce(
   'custom Claude card enables thinking presets',
-  '\t\t\t\t\t\tprobeBlocked: keyFailure === "keyBlank" ? "keyBlankNew" : keyFailure,\n\t\t\t\t\t\tapi,\n\t\t\t\t\t\tt,\n\t\t\t\t\t\tdisabled: profileDisabled',
-  '\t\t\t\t\t\tprobeBlocked: keyFailure === "keyBlank" ? "keyBlankNew" : keyFailure,\n\t\t\t\t\t\tthinkingPresets: isAdaptiveClaude,\n\t\t\t\t\t\tapi,\n\t\t\t\t\t\tt,\n\t\t\t\t\t\tdisabled: profileDisabled',
+  '\t\t\t\t\t\tprobeBlocked: keyFailure === "keyBlank" ? "keyBlankNew" : keyFailure,\n\t\t\t\t\t\toperations,\n\t\t\t\t\t\tt,\n\t\t\t\t\t\tdisabled: profileDisabled',
+  '\t\t\t\t\t\tprobeBlocked: keyFailure === "keyBlank" ? "keyBlankNew" : keyFailure,\n\t\t\t\t\t\tthinkingPresets: isAdaptiveClaude,\n\t\t\t\t\t\toperations,\n\t\t\t\t\t\tt,\n\t\t\t\t\t\tdisabled: profileDisabled',
 )
 
 replaceOnce(
   'existing Anthropic card enables thinking presets',
-  '\t\t\t\t\t\t\t\t...catalogProps,\n\t\t\t\t\t\t\t\tprobe,\n\t\t\t\t\t\t\t\tprobeBlocked: keyFailure,\n\t\t\t\t\t\t\t\tapi',
-  '\t\t\t\t\t\t\t\t...catalogProps,\n\t\t\t\t\t\t\t\tprobe,\n\t\t\t\t\t\t\t\tprobeBlocked: keyFailure,\n\t\t\t\t\t\t\t\tthinkingPresets: props.thinkingPresets === true,\n\t\t\t\t\t\t\t\tapi',
+  '\t\t\t\t\t\t\t\t...catalogProps,\n\t\t\t\t\t\t\t\tprobe,\n\t\t\t\t\t\t\t\tprobeBlocked: keyFailure,\n\t\t\t\t\t\t\t\toperations',
+  '\t\t\t\t\t\t\t\t...catalogProps,\n\t\t\t\t\t\t\t\tprobe,\n\t\t\t\t\t\t\t\tprobeBlocked: keyFailure,\n\t\t\t\t\t\t\t\tthinkingPresets: props.thinkingPresets === true,\n\t\t\t\t\t\t\t\toperations',
 )
 
 replaceOnce(

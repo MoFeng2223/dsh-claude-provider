@@ -4,7 +4,7 @@
 
 ~~DeepSeek Harness 的通用推理强度控制与新版 Claude 模型要求的请求参数并不完全匹配，因此选择某个档位后，可能直接出现 HTTP 400，也可能被适配器静默映射成另一个实际档位，例如界面选择 Max，实际请求却只相当于 High。`@mofeng2223/dsh-claude-provider` 增加了一个明确的 Claude 提供方类型，并按照每个 Claude 模型的配置发送正确的推理参数。~~
 
-DeepSeek Harness 0.1.1-rc.1 已支持 Claude 系列模型的推理强度参数，但仍需要在 `settings.yaml` 中手动配置。因此，本插件不再在运行时拦截或改写模型请求，而是在用户通过前端保存 Claude 提供方时，将相应的原生配置正确写入 `settings.yaml`。
+自 DeepSeek Harness 0.1.1-rc.1 起，官方已支持 Claude 系列模型的推理强度参数，但仍需要在 `settings.yaml` 中手动配置。因此，本插件不再在运行时拦截或改写模型请求，而是在用户通过前端保存 Claude 提供方时，将相应的原生配置正确写入 `settings.yaml`。
 
 插件仍保留专用的 Claude 提供方配置页面，用户无需手动编辑 `settings.yaml`。Anthropic 原生模型探测、常用 Claude 模型参数自动填写等官方尚未实现的功能也继续保留。
 
@@ -64,12 +64,6 @@ DeepSeek Harness 0.1.1-rc.1 已支持 Claude 系列模型的推理强度参数�
 npx @deepseek-ai/dsh plugin --profile web add @mofeng2223/dsh-claude-provider
 ```
 
-不使用 Web 界面的命令行运行使用 Headless Profile：
-
-```sh
-npx @deepseek-ai/dsh plugin --profile headless add @mofeng2223/dsh-claude-provider
-```
-
 安装后需要重启对应的 DeepSeek Harness 进程。
 
 ### 从源码安装
@@ -91,19 +85,10 @@ npm pack --pack-destination dist
 npx @deepseek-ai/dsh plugin --profile web add ./dist/mofeng2223-dsh-claude-provider-*.tgz
 ```
 
-或者安装到 Headless Profile：
-
-```sh
-npx @deepseek-ai/dsh plugin --profile headless add ./dist/mofeng2223-dsh-claude-provider-*.tgz
-```
-
 ## 卸载
-
-插件安装在哪个 Profile，就执行对应的卸载命令：
 
 ```sh
 npx @deepseek-ai/dsh plugin --profile web remove @mofeng2223/dsh-claude-provider
-npx @deepseek-ai/dsh plugin --profile headless remove @mofeng2223/dsh-claude-provider
 ```
 
 卸载插件不会删除 `~/.dsh/settings.yaml` 或已经保存的凭据。已有的 Claude 提供方会继续作为普通的 `anthropic-messages` 自定义路由保留；`reasoningEfforts`、默认 `reasoning` 和 `compat.forceAdaptiveThinking` 都是 RC8 原生字段，因此自适应思考和前端推理等级选择仍然有效。卸载后只会失去 Claude 专用的添加／编辑界面、模型探测和参数预填。

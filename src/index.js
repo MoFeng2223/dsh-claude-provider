@@ -5,7 +5,6 @@ export const inject = ['llm', 'settings']
 
 export const CLAUDE_PROVIDER_TYPE = 'claude-adaptive'
 export const CLAUDE_PROVIDER_SETTINGS_NS = 'dsh-claude-provider'
-export const CLAUDE_PROVIDER_DIRECTORY_SENTINEL = 'dsh-claude-provider-type'
 
 const ProviderTypeSettings = z.object({
   providerTypes: z.dict(z.const(CLAUDE_PROVIDER_TYPE)).default({}),
@@ -16,6 +15,19 @@ export const CLAUDE_DISCOVERY_API = 'mofeng-anthropic-models'
 const PI_AI_SETTINGS_NS = 'llm-pi-ai'
 const MAX_DISCOVERY_RESPONSE_BYTES = 4 * 1024 * 1024
 const MAX_DISCOVERY_PAGES = 100
+
+/** Recorded capacities and thinking presets for known Claude model ids. */
+export const CLAUDE_KNOWN_MODELS = Object.freeze({
+  'claude-fable-5': Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: 'five' }),
+  'claude-haiku-4-5-20251001': Object.freeze({ contextWindow: 200000, maxTokens: 64000, preset: 'toggle' }),
+  'claude-haiku-4-5': Object.freeze({ contextWindow: 200000, maxTokens: 64000, preset: 'toggle' }),
+  'claude-opus-4-6': Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: 'four' }),
+  'claude-opus-4-7': Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: 'five' }),
+  'claude-opus-4-8': Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: 'five' }),
+  'claude-opus-5': Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: 'five' }),
+  'claude-sonnet-4-6': Object.freeze({ contextWindow: 1000000, maxTokens: 64000, preset: 'four' }),
+  'claude-sonnet-5': Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: 'five' }),
+})
 
 function requireNonEmptyString(value, field) {
   if (typeof value !== 'string' || value.length === 0) {
@@ -117,6 +129,13 @@ export function readAnthropicModelPage(body) {
   }
 }
 
+/** Fill a discovered row's capacities from the recorded Claude model table. */
+export function withKnownModelMetadata(model) {
+  const known = CLAUDE_KNOWN_MODELS[model?.id]
+  if (known === undefined) return model
+  return { ...model, contextWindow: known.contextWindow, maxTokens: known.maxTokens }
+}
+
 function discoveryHeaders(apiKey) {
   const value = requireNonEmptyString(apiKey, 'apiKey').trim()
   if (value.length === 0) throw new Error('Claude 模型目录：请先填写 API 密钥')
@@ -174,7 +193,7 @@ export async function discoverAnthropicModels({ baseURL, apiKey, signal, fetchIm
     for (const model of parsed.models) {
       if (seen.has(model.id)) continue
       seen.add(model.id)
-      models.push(model)
+      models.push(withKnownModelMetadata(model))
     }
     if (!parsed.hasMore) return models
     if (parsed.lastId === undefined || parsed.lastId === afterId) {
@@ -204,38 +223,39 @@ async function discoveryApiKey(ctx, request) {
   return value
 }
 
+/** Whether an explicitly registered provider belongs to this plugin's Claude type. */
+export function isClaudeProviderType(settings, provider) {
+  if (typeof provider !== 'string' || provider.length === 0) return false
+  return settings?.providerTypes?.[provider] === CLAUDE_PROVIDER_TYPE
+}
+
 function installClaudeModelDiscovery(ctx) {
   const llm = ctx.llm
   const upstream = llm.discoverModels
-  const wrapped = async function (settingsNs, request) {
-    if (settingsNs !== PI_AI_SETTINGS_NS || request.api !== CLAUDE_DISCOVERY_API) {
-      return upstream.call(this, settingsNs, request)
+  // DSH 0.1.2-alpha moved caller cancellation to a third positional
+  // parameter; `request.signal` no longer exists. Forward it verbatim.
+  // Only the plugin's own Claude surfaces send CLAUDE_DISCOVERY_API, so every
+  // other provider — generic anthropic-messages routes included — keeps the
+  // stock discovery behavior.
+  const wrapped = async function (settingsNs, request, signal) {
+    if (settingsNs !== PI_AI_SETTINGS_NS || request?.api !== CLAUDE_DISCOVERY_API) {
+      return upstream.call(this, settingsNs, request, signal)
     }
     // The built-in Anthropic route already has pi-ai's catalog and should keep
     // using it. The plugin extension is only for hand-declared Claude routes.
     if (request.provider === 'anthropic') {
-      return upstream.call(this, settingsNs, { ...request, api: 'anthropic-messages' })
+      return upstream.call(this, settingsNs, { ...request, api: 'anthropic-messages' }, signal)
     }
     if (typeof request.baseURL !== 'string' || request.baseURL.length === 0) {
       throw new Error('Claude 模型目录：请先填写 API 地址')
     }
     const apiKey = await discoveryApiKey(ctx, request)
-    return discoverAnthropicModels({
-      baseURL: request.baseURL,
-      apiKey,
-      signal: request.signal,
-    })
+    return discoverAnthropicModels({ baseURL: request.baseURL, apiKey, signal })
   }
   llm.discoverModels = wrapped
   ctx.effect(() => () => {
     if (llm.discoverModels === wrapped) llm.discoverModels = upstream
   })
-}
-
-/** Whether an explicitly registered provider belongs to this plugin's Claude type. */
-export function isClaudeProviderType(settings, provider) {
-  if (typeof provider !== 'string' || provider.length === 0) return false
-  return settings?.providerTypes?.[provider] === CLAUDE_PROVIDER_TYPE
 }
 
 export function apply(ctx) {
@@ -244,11 +264,5 @@ export function apply(ctx) {
     ProviderTypeSettings,
     { base: { providerTypes: {} } },
   )
-  ctx.llm.registerConfigurableProviders([{
-    provider: CLAUDE_PROVIDER_DIRECTORY_SENTINEL,
-    displayName: 'Claude Provider Type',
-    settingsNs: CLAUDE_PROVIDER_SETTINGS_NS,
-    settingsPath: ['providerTypes'],
-  }])
   installClaudeModelDiscovery(ctx)
 }
