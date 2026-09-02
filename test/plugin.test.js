@@ -17,10 +17,10 @@ import {
 const builtClient = readFileSync(new URL('../lib/client.js', import.meta.url), 'utf8')
 const packageManifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
 
-test('builds the forked section against DSH 0.1.2-alpha.3', () => {
+test('builds the forked section against DSH 0.1.2-alpha.5', () => {
   assert.equal(packageManifest.exports['./client'], './lib/client.js')
   assert.equal(packageManifest.scripts.build, 'node scripts/build-client.mjs')
-  assert.equal(packageManifest.devDependencies['@deepseek-ai/dsh-client-ui-settings-models'], '0.1.2-alpha.3')
+  assert.equal(packageManifest.devDependencies['@deepseek-ai/dsh-client-ui-settings-models'], '0.1.2-alpha.5')
   assert.ok(!packageManifest.dsh.client.inject.includes('@deepseek-ai/dsh-client-runtime'))
 })
 
