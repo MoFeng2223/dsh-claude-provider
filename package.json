@@ -1,7 +1,7 @@
 {
   "name": "@mofeng2223/dsh-claude-provider",
-  "version": "0.4.1",
-  "description": "Custom Claude provider support for DeepSeek Harness 0.1.2-alpha",
+  "version": "0.4.2",
+  "description": "Custom Claude provider support for DeepSeek Harness 0.1.2",
   "author": "mofeng2223",
   "license": "MIT",
   "repository": {
@@ -60,6 +60,6 @@
     }
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-client-ui-settings-models": "0.1.2-alpha.5"
+    "@deepseek-ai/dsh-client-ui-settings-models": "0.1.2-rc.1"
   }
 }

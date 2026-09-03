@@ -105,7 +105,7 @@ replaceOnce(
   '\t\tconst CLAUDE_TOGGLE_EFFORTS = Object.freeze({ off: null, high: "high" });',
   `\t\tconst CLAUDE_TOGGLE_EFFORTS = Object.freeze({ off: null, high: "high" });
 \t\tconst CLAUDE_KNOWN_MODELS = Object.freeze({
-\t\t\t"claude-fable-5": Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: "five" }),
+\t\t\t"claude-fable-5-1": Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: "five" }),\n\t\t\t"claude-fable-5": Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: "five" }),
 \t\t\t"claude-haiku-4-5-20251001": Object.freeze({ contextWindow: 200000, maxTokens: 64000, preset: "toggle" }),
 \t\t\t"claude-haiku-4-5": Object.freeze({ contextWindow: 200000, maxTokens: 64000, preset: "toggle" }),
 \t\t\t"claude-opus-4-6": Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: "four" }),
@@ -330,13 +330,13 @@ replaceOnce(
 replaceOnce(
   'English Claude copy',
   '\t\t\tcustomTitle: "Custom provider",\n\t\t\tcustomTag: "Custom",',
-  '\t\t\tcustomTitle: "Custom provider",\n\t\t\tcustomTag: "Custom",\n\t\t\tclaudeCustomAdd: "Add Claude provider",\n\t\t\tclaudeCustomTitle: "Claude provider",\n\t\t\tclaudeTypeUnavailable: "Claude provider type storage is unavailable.",\n\t\t\tclaudeTypeTag: "Claude provider",\n\t\t\tclaudeTypeIntro: "This provider type saves native RC8 adaptive-thinking compatibility, model reasoning mappings, Claude model discovery, and recorded capacities.",\n\t\t\tadaptiveClaudeEnabled: "Choose a thinking mode for each model; new models default to five levels.",\n\t\t\tadaptiveClaudeHelpLabel: "Thinking mode help",\n\t\t\tadaptiveClaudeHelp: "Five (low / medium / high / xhigh / max): Fable 5, Opus 5, Opus 4.8, Opus 4.7, Sonnet 5\\nFour (low / medium / high / max): Opus 4.6, Sonnet 4.6\\nOn / Off: Haiku 4.5",\n\t\t\tadaptiveClaudeTag: "Claude configured",\n\t\t\tthinkingPreset: "Thinking mode",\n\t\t\tthinkingPresetToggle: "On / Off",\n\t\t\tthinkingPresetFour: "Four levels",\n\t\t\tthinkingPresetFive: "Five levels (default)",',
+  '\t\t\tcustomTitle: "Custom provider",\n\t\t\tcustomTag: "Custom",\n\t\t\tclaudeCustomAdd: "Add Claude provider",\n\t\t\tclaudeCustomTitle: "Claude provider",\n\t\t\tclaudeTypeUnavailable: "Claude provider type storage is unavailable.",\n\t\t\tclaudeTypeTag: "Claude provider",\n\t\t\tclaudeTypeIntro: "This provider type saves native RC8 adaptive-thinking compatibility, model reasoning mappings, Claude model discovery, and recorded capacities.",\n\t\t\tadaptiveClaudeEnabled: "Choose a thinking mode for each model; new models default to five levels.",\n\t\t\tadaptiveClaudeHelpLabel: "Thinking mode help",\n\t\t\tadaptiveClaudeHelp: "Five (low / medium / high / xhigh / max): Fable 5.1, Fable 5, Opus 5, Opus 4.8, Opus 4.7, Sonnet 5\\nFour (low / medium / high / max): Opus 4.6, Sonnet 4.6\\nOn / Off: Haiku 4.5",\n\t\t\tadaptiveClaudeTag: "Claude configured",\n\t\t\tthinkingPreset: "Thinking mode",\n\t\t\tthinkingPresetToggle: "On / Off",\n\t\t\tthinkingPresetFour: "Four levels",\n\t\t\tthinkingPresetFive: "Five levels (default)",',
 )
 
 replaceOnce(
   'Chinese Claude copy',
   '\t\t\tcustomTitle: "自定义提供方",\n\t\t\tcustomTag: "自定义",',
-  '\t\t\tcustomTitle: "自定义提供方",\n\t\t\tcustomTag: "自定义",\n\t\t\tclaudeCustomAdd: "添加 Claude 提供方",\n\t\t\tclaudeCustomTitle: "Claude 提供方",\n\t\t\tclaudeTypeUnavailable: "Claude 提供方类型存储不可用。",\n\t\t\tclaudeTypeTag: "Claude 提供方",\n\t\t\tclaudeTypeIntro: "此提供方类型会写入 RC8 原生自适应思考兼容配置、模型思考映射、Claude 模型发现和已记录容量。",\n\t\t\tadaptiveClaudeEnabled: "每个模型可单独选择思考模式，新增模型默认使用五档。",\n\t\t\tadaptiveClaudeHelpLabel: "思考模式说明",\n\t\t\tadaptiveClaudeHelp: "五档（低 / 中 / 高 / 超高 / 最大）：Fable 5、Opus 5、Opus 4.8、Opus 4.7、Sonnet 5\\n四档（低 / 中 / 高 / 最大）：Opus 4.6、Sonnet 4.6\\n开启 / 关闭：Haiku 4.5",\n\t\t\tadaptiveClaudeTag: "Claude 已适配",\n\t\t\tthinkingPreset: "思考模式",\n\t\t\tthinkingPresetToggle: "开启 / 关闭",\n\t\t\tthinkingPresetFour: "四档",\n\t\t\tthinkingPresetFive: "五档（默认）",',
+  '\t\t\tcustomTitle: "自定义提供方",\n\t\t\tcustomTag: "自定义",\n\t\t\tclaudeCustomAdd: "添加 Claude 提供方",\n\t\t\tclaudeCustomTitle: "Claude 提供方",\n\t\t\tclaudeTypeUnavailable: "Claude 提供方类型存储不可用。",\n\t\t\tclaudeTypeTag: "Claude 提供方",\n\t\t\tclaudeTypeIntro: "此提供方类型会写入 RC8 原生自适应思考兼容配置、模型思考映射、Claude 模型发现和已记录容量。",\n\t\t\tadaptiveClaudeEnabled: "每个模型可单独选择思考模式，新增模型默认使用五档。",\n\t\t\tadaptiveClaudeHelpLabel: "思考模式说明",\n\t\t\tadaptiveClaudeHelp: "五档（低 / 中 / 高 / 超高 / 最大）：Fable 5.1、Fable 5、Opus 5、Opus 4.8、Opus 4.7、Sonnet 5\\n四档（低 / 中 / 高 / 最大）：Opus 4.6、Sonnet 4.6\\n开启 / 关闭：Haiku 4.5",\n\t\t\tadaptiveClaudeTag: "Claude 已适配",\n\t\t\tthinkingPreset: "思考模式",\n\t\t\tthinkingPresetToggle: "开启 / 关闭",\n\t\t\tthinkingPresetFour: "四档",\n\t\t\tthinkingPresetFive: "五档（默认）",',
 )
 
 await mkdir(dirname(outputPath), { recursive: true })

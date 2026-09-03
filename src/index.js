@@ -18,6 +18,7 @@ const MAX_DISCOVERY_PAGES = 100
 
 /** Recorded capacities and thinking presets for known Claude model ids. */
 export const CLAUDE_KNOWN_MODELS = Object.freeze({
+  'claude-fable-5-1': Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: 'five' }),
   'claude-fable-5': Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: 'five' }),
   'claude-haiku-4-5-20251001': Object.freeze({ contextWindow: 200000, maxTokens: 64000, preset: 'toggle' }),
   'claude-haiku-4-5': Object.freeze({ contextWindow: 200000, maxTokens: 64000, preset: 'toggle' }),
