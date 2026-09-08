@@ -17,11 +17,25 @@ import {
 const builtClient = readFileSync(new URL('../lib/client.js', import.meta.url), 'utf8')
 const packageManifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
 
-test('builds the forked section against DSH 0.1.2-rc.1', () => {
+test('builds the forked section against DSH 0.1.3-alpha.2', () => {
   assert.equal(packageManifest.exports['./client'], './lib/client.js')
   assert.equal(packageManifest.scripts.build, 'node scripts/build-client.mjs')
-  assert.equal(packageManifest.devDependencies['@deepseek-ai/dsh-client-ui-settings-models'], '0.1.2-rc.1')
+  assert.equal(packageManifest.devDependencies['@deepseek-ai/dsh-client-ui-settings-models'], '0.1.3-alpha.2')
   assert.ok(!packageManifest.dsh.client.inject.includes('@deepseek-ai/dsh-client-runtime'))
+})
+
+test('model discovery selection clears hidden selections when deselecting filtered results', () => {
+  const start = builtClient.indexOf('const toggleVisibleCandidates =')
+  const end = builtClient.indexOf('const askable =', start)
+  assert.ok(start >= 0 && end > start)
+  const toggle = new Function('visibleCandidates', 'setPicked',
+    builtClient.slice(start, end) + '\nreturn toggleVisibleCandidates;')
+  let picked = new Set(['hidden-model'])
+  const click = toggle([{ id: 'visible-model' }], update => { picked = update(picked) })
+  click()
+  assert.deepEqual([...picked].sort(), ['hidden-model', 'visible-model'])
+  click()
+  assert.equal(picked.size, 0)
 })
 
 test('built client patches the alpha operations world, not the removed rc APIs', () => {
