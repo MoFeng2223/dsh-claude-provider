@@ -192,8 +192,8 @@ replaceOnce(
 
 replaceOnce(
   'Claude profile serialization',
-  '\t\t\t\t\t\tapi: protocol,\n\t\t\t\t\t\tbaseURL,\n\t\t\t\t\t\tmodels: models.map((model) => ({ ...model }))',
-  '\t\t\t\t\t\tapi: isAdaptiveClaude ? "anthropic-messages" : protocol,\n\t\t\t\t\t\tbaseURL,\n\t\t\t\t\t\tmodels: models.map((model) => isAdaptiveClaude ? withNativeClaudeModel(model) : { ...model }),\n\t\t\t\t\t\t...isAdaptiveClaude ? { reasoning: "high" } : {}',
+  '\t\t\t\t\t\tapi: protocol,\n\t\t\t\t\t\tbaseURL: normalizedBaseURL,\n\t\t\t\t\t\tmodels: models.map((model) => ({ ...model }))',
+  '\t\t\t\t\t\tapi: isAdaptiveClaude ? "anthropic-messages" : protocol,\n\t\t\t\t\t\tbaseURL: normalizedBaseURL,\n\t\t\t\t\t\tmodels: models.map((model) => isAdaptiveClaude ? withNativeClaudeModel(model) : { ...model }),\n\t\t\t\t\t\t...isAdaptiveClaude ? { reasoning: "high" } : {}',
 )
 
 replaceOnce(
@@ -250,16 +250,11 @@ replaceOnce(
   '\t\t\t\t\t\t\tconst adaptiveClaude = isClaudeProvider(row, state);\n\t\t\t\t\t\t\tconst credentialConfigured = row.credential?.configured === true;',
 )
 
-replaceOnce(
-  'setup-card provider editor Claude type',
-  '\ttarget,\n\t\t\t\t\t\t\t\t\tnamespace,\n\t\t\t\t\t\t\t\t\tschema,\n\t\t\t\t\t\t\t\t\toperations,\n\t\t\t\t\t\t\t\t\tt,\n\t\t\t\t\t\t\t\t\treadOnly:',
-  '\ttarget,\n\t\t\t\t\t\t\t\t\tnamespace,\n\t\t\t\t\t\t\t\t\tschema,\n\t\t\t\t\t\t\t\t\tthinkingPresets: isClaudeProvider(row, state),\n\t\t\t\t\t\t\t\t\toperations,\n\t\t\t\t\t\t\t\t\tt,\n\t\t\t\t\t\t\t\t\treadOnly:',
-)
-
-replaceOnce(
-  'open provider editor Claude type',
-  '\ttarget,\n\t\t\t\t\t\t\t\t\t\tnamespace,\n\t\t\t\t\t\t\t\t\t\tschema,\n\t\t\t\t\t\t\t\t\t\toperations,\n\t\t\t\t\t\t\t\t\t\tt,\n\t\t\t\t\t\t\t\t\t\treadOnly:',
-  '\ttarget,\n\t\t\t\t\t\t\t\t\t\tnamespace,\n\t\t\t\t\t\t\t\t\t\tschema,\n\t\t\t\t\t\t\t\t\t\tthinkingPresets: isClaudeProvider(row, state),\n\t\t\t\t\t\t\t\t\t\toperations,\n\t\t\t\t\t\t\t\t\t\tt,\n\t\t\t\t\t\t\t\t\t\treadOnly:',
+replaceExactly(
+  'Claude type in setup and open provider editors',
+  "\ttarget,\n\t\t\t\t\t\t\t\t\t\tnamespace,\n\t\t\t\t\t\t\t\t\t\tschema,\n\t\t\t\t\t\t\t\t\t\toperations,\n\t\t\t\t\t\t\t\t\t\tt,\n\t\t\t\t\t\t\t\t\t\treadOnly:",
+  "\ttarget,\n\t\t\t\t\t\t\t\t\t\tnamespace,\n\t\t\t\t\t\t\t\t\t\tschema,\n\t\t\t\t\t\t\t\t\t\tthinkingPresets: isClaudeProvider(row, state),\n\t\t\t\t\t\t\t\t\t\toperations,\n\t\t\t\t\t\t\t\t\t\tt,\n\t\t\t\t\t\t\t\t\t\treadOnly:",
+  2,
 )
 
 replaceOnce(
@@ -290,8 +285,8 @@ replaceOnce(
 
 replaceOnce(
   'custom Claude card enables thinking presets',
-  '\t\t\t\t\t\tprobeBlocked: keyFailure === "keyBlank" ? "keyBlankNew" : keyFailure,\n\t\t\t\t\t\toperations,\n\t\t\t\t\t\tt,\n\t\t\t\t\t\tdisabled: profileDisabled',
-  '\t\t\t\t\t\tprobeBlocked: keyFailure === "keyBlank" ? "keyBlankNew" : keyFailure,\n\t\t\t\t\t\tthinkingPresets: isAdaptiveClaude,\n\t\t\t\t\t\toperations,\n\t\t\t\t\t\tt,\n\t\t\t\t\t\tdisabled: profileDisabled',
+  '\t\t\t\t\t\tprobeBlocked: baseUrlInvalid ? "customBaseUrlInvalid" : keyFailure === "keyBlank" ? "keyBlankNew" : keyFailure,\n\t\t\t\t\t\toperations,\n\t\t\t\t\t\tt,\n\t\t\t\t\t\tdisabled: profileDisabled',
+  '\t\t\t\t\t\tprobeBlocked: baseUrlInvalid ? "customBaseUrlInvalid" : keyFailure === "keyBlank" ? "keyBlankNew" : keyFailure,\n\t\t\t\t\t\tthinkingPresets: isAdaptiveClaude,\n\t\t\t\t\t\toperations,\n\t\t\t\t\t\tt,\n\t\t\t\t\t\tdisabled: profileDisabled',
 )
 
 replaceOnce(
@@ -324,7 +319,7 @@ replaceOnce(
 replaceOnce(
   'separate Claude provider add button',
   't("customAdd")]\n\t\t\t\t\t\t\t})]',
-  't("customAdd")]\n\t\t\t\t\t\t\t}), (0, react_jsx_runtime.jsxs)("button", {\n\t\t\t\t\t\t\t\ttype: "button",\n\t\t\t\t\t\t\t\tclassName: ModelsSection_module_css_default["addButton"],\n\t\t\t\t\t\t\t\tdisabled: !state.namespaces.has(CLAUDE_PROVIDER_SETTINGS_NS) || !state.writable,\n\t\t\t\t\t\t\t\tonClick: () => {\n\t\t\t\t\t\t\t\t\tsetSavedTarget(void 0);\n\t\t\t\t\t\t\t\t\tsetAdding(false);\n\t\t\t\t\t\t\t\t\tsetEditing(void 0);\n\t\t\t\t\t\t\t\t\tsetDeclaringType(CLAUDE_PROVIDER_TYPE);\n\t\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\t\tchildren: [(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutline16, { size: 14 }), t("claudeCustomAdd")]\n\t\t\t\t\t\t\t})]',
+  't("customAdd")]\n\t\t\t\t\t\t\t}), (0, react_jsx_runtime.jsxs)("button", {\n\t\t\t\t\t\t\t\ttype: "button",\n\t\t\t\t\t\t\t\tclassName: ModelsSection_module_css_default["addButton"],\n\t\t\t\t\t\t\t\tdisabled: !state.namespaces.has("llm-pi-ai") || !state.namespaces.has(CLAUDE_PROVIDER_SETTINGS_NS) || !state.writable,\n\t\t\t\t\t\t\t\tonClick: () => {\n\t\t\t\t\t\t\t\t\tsetSavedTarget(void 0);\n\t\t\t\t\t\t\t\t\tsetAdding(false);\n\t\t\t\t\t\t\t\t\tsetEditing(void 0);\n\t\t\t\t\t\t\t\t\tsetDeclaringType(CLAUDE_PROVIDER_TYPE);\n\t\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\t\tchildren: [(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutline16, { size: 14 }), t("claudeCustomAdd")]\n\t\t\t\t\t\t\t})]',
 )
 
 replaceOnce(

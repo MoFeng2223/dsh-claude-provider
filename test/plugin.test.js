@@ -17,10 +17,37 @@ import {
 const builtClient = readFileSync(new URL('../lib/client.js', import.meta.url), 'utf8')
 const packageManifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
 
-test('builds the forked section against DSH 0.1.3-alpha.2', () => {
+function clientFunction(name) {
+  const start = builtClient.indexOf(`function ${name}(`)
+  const end = builtClient.indexOf('\n\t\t}', start)
+  assert.ok(start >= 0 && end > start)
+  return new Function(`${builtClient.slice(start, end + 4)}; return ${name};`)()
+}
+
+test('RC2 URL validation accepts HTTP endpoints and rejects invalid protocols', () => {
+  const valid = clientFunction('isHttpUrl')
+  assert.equal(valid('https://gateway.example/v1'), true)
+  assert.equal(valid('http://localhost:8080'), true)
+  for (const url of ['', 'gateway.example', 'ftp://gateway.example', 'javascript:alert(1)']) {
+    assert.equal(valid(url), false)
+  }
+  assert.match(builtClient, /baseURL: normalizedBaseURL/)
+  assert.match(builtClient, /probeBlocked: baseUrlInvalid \? "customBaseUrlInvalid"/)
+})
+
+test('RC2 provider diagnostics survive the directory join even for inactive providers', () => {
+  const join = clientFunction('joinProviderDirectory')
+  const rows = join([], [{ provider: 'broken', displayName: 'Broken', settingsNs: 'llm-pi-ai',
+    settingsPath: ['providers', 'broken'], error: 'Model configuration needs repair' }])
+  assert.equal(rows[0].active, false)
+  assert.equal(rows[0].error, 'Model configuration needs repair')
+  assert.match(builtClient, /role: "alert",[\s\S]*?children: row\.entry\.error/)
+})
+
+test('builds the forked section against DSH 0.1.5-rc.2', () => {
   assert.equal(packageManifest.exports['./client'], './lib/client.js')
   assert.equal(packageManifest.scripts.build, 'node scripts/build-client.mjs')
-  assert.equal(packageManifest.devDependencies['@deepseek-ai/dsh-client-ui-settings-models'], '0.1.3-alpha.2')
+  assert.equal(packageManifest.devDependencies['@deepseek-ai/dsh-client-ui-settings-models'], '0.1.5-rc.2')
   assert.ok(!packageManifest.dsh.client.inject.includes('@deepseek-ai/dsh-client-runtime'))
 })
 
