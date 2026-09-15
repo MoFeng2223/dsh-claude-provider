@@ -1,0 +1,61 @@
+name: Publish npm and GitHub Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Validate release tag
+        if: github.event_name == 'push'
+        run: |
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          const { version } = JSON.parse(fs.readFileSync('package.json'));
+          if (!/^\d+\.\d+\.\d+$/.test(version) || process.env.GITHUB_REF_NAME !== `v${version}`) {
+            throw new Error('Tag must match the stable package version');
+          }
+          JS
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - name: Check committed build
+        run: git diff --exit-code
+      - name: Pack verified files
+        run: npm pack --json > "$RUNNER_TEMP/package-pack.json"
+      - name: Publish and verify npm package
+        if: github.event_name == 'push'
+        run: node scripts/publish-release.mjs
+      - name: Create GitHub Release
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release create "$GITHUB_REF_NAME" --verify-tag --title "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/release-notes.md"
+          fi
+      - name: Validation-only result
+        if: github.event_name == 'workflow_dispatch'
+        run: echo 'Build, tests and packaging passed. Manual runs do not publish.' >> "$GITHUB_STEP_SUMMARY"
