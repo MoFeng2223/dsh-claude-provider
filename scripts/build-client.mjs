@@ -61,7 +61,7 @@ replaceOnce(
   'native RC8 Claude profile helper',
   '\t\tfunction isClaudeProvider(row, state) {',
   `\t\tfunction withNativeClaudeModel(model) {
-\t\t\tconst next = withDefaultClaudeReasoning(model);
+\t\t\tconst next = withKnownClaudeInput(withDefaultClaudeReasoning(model));
 \t\t\tconst efforts = next.reasoningEfforts;
 \t\t\tconst adaptive = efforts !== null && typeof efforts === "object" && !Array.isArray(efforts)
 \t\t\t\t&& ["low", "medium", "high", "max"].every((level) => typeof efforts[level] === "string" && efforts[level].length > 0);
@@ -120,10 +120,10 @@ replaceOnce(
 replaceOnce(
   'fetched Claude metadata helper',
   '\t\tfunction thinkingPresetOf(model) {',
-  `\t\tfunction withFetchedClaudeMetadata(model) {
+  `\t\tfunction withKnownClaudeInput(model) {\n\t\t\tif (!CLAUDE_KNOWN_MODELS[model?.id] || (Array.isArray(model.input) && model.input.length > 0)) return { ...model };\n\t\t\treturn { ...model, input: ["text", "image"] };\n\t\t}\n\t\tfunction withFetchedClaudeMetadata(model) {
 \t\t\tconst known = CLAUDE_KNOWN_MODELS[model?.id];
 \t\t\tif (known === undefined) return withDefaultClaudeReasoning(model);
-\t\t\treturn { ...model, contextWindow: known.contextWindow, maxTokens: known.maxTokens, reasoningEfforts: reasoningEffortsForPreset(known.preset) };
+\t\t\treturn { ...withKnownClaudeInput(model), contextWindow: known.contextWindow, maxTokens: known.maxTokens, reasoningEfforts: reasoningEffortsForPreset(known.preset) };
 \t\t}
 \t\tfunction thinkingPresetOf(model) {`,
 )
@@ -277,10 +277,17 @@ replaceOnce(
   '\t\t\t\t\t\tonChange([...models, props.thinkingPresets ? withDefaultClaudeReasoning({ id: "" }) : { id: "" }]);',
 )
 
+// Keep the upstream shared row and append Claude-only controls to its expanded fields.
 replaceOnce(
-  'per-model thinking preset selector',
-  '\t\t\t\t\t\t\t\t\t\teditCapacity(index, "maxTokens", event.target.value);\n\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t})]\n\t\t\t\t\t\t\t})]',
-  '\t\t\t\t\t\t\t\t\t\teditCapacity(index, "maxTokens", event.target.value);\n\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t})]\n\t\t\t\t\t\t\t}), props.thinkingPresets ? (0, react_jsx_runtime.jsxs)("label", {\n\t\t\t\t\t\t\t\tclassName: ModelsSection_module_css_default["modelField"],\n\t\t\t\t\t\t\t\tchildren: [(0, react_jsx_runtime.jsx)("span", {\n\t\t\t\t\t\t\t\t\tclassName: ModelsSection_module_css_default["modelFieldLabel"],\n\t\t\t\t\t\t\t\t\tchildren: t("thinkingPreset")\n\t\t\t\t\t\t\t\t}), (0, react_jsx_runtime.jsxs)("select", {\n\t\t\t\t\t\t\t\t\tclassName: `${ModelsSection_module_css_default["input"]} ${ModelsSection_module_css_default["selectInput"]}`,\n\t\t\t\t\t\t\t\t\tvalue: thinkingPresetOf(model),\n\t\t\t\t\t\t\t\t\t"aria-label": `${t("thinkingPreset")} ${index + 1}`,\n\t\t\t\t\t\t\t\t\tdisabled,\n\t\t\t\t\t\t\t\t\tonChange: (event) => {\n\t\t\t\t\t\t\t\t\t\tpatch(index, { reasoningEfforts: reasoningEffortsForPreset(event.target.value) });\n\t\t\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\t\t\tchildren: [(0, react_jsx_runtime.jsx)("option", { value: "toggle", children: t("thinkingPresetToggle") }), (0, react_jsx_runtime.jsx)("option", { value: "four", children: t("thinkingPresetFour") }), (0, react_jsx_runtime.jsx)("option", { value: "five", children: t("thinkingPresetFive") })]\n\t\t\t\t\t\t\t\t})]\n\t\t\t\t\t\t\t}) : null]',
+  'shared model row Claude controls',
+  '\t\t\t\t\t\tonChange: props.onChange\n\t\t\t\t\t})]',
+  '\t\t\t\t\t\tonChange: props.onChange\n\t\t\t\t\t}), props.thinkingPresets ? (0, react_jsx_runtime.jsxs)("label", {\n\t\t\t\t\t\tclassName: ModelsSection_module_css_default["modelField"],\n\t\t\t\t\t\tchildren: [t("thinkingPreset"), (0, react_jsx_runtime.jsxs)("select", {\n\t\t\t\t\t\t\tclassName: ModelsSection_module_css_default["input"],\n\t\t\t\t\t\t\tvalue: thinkingPresetOf(model),\n\t\t\t\t\t\t\t"aria-label": t("thinkingPreset") + " " + position,\n\t\t\t\t\t\t\tdisabled,\n\t\t\t\t\t\t\tonChange: (event) => props.onChange({ ...model, reasoningEfforts: reasoningEffortsForPreset(event.target.value) }),\n\t\t\t\t\t\t\tchildren: ["toggle", "four", "five"].map((preset) => (0, react_jsx_runtime.jsx)("option", { value: preset, children: t({ toggle: "thinkingPresetToggle", four: "thinkingPresetFour", five: "thinkingPresetFive" }[preset]) }, preset))\n\t\t\t\t\t\t})]\n\t\t\t\t\t}) : null]',
+)
+
+replaceOnce(
+  'Claude model row defaults and presets',
+  '\t\t\t\t\t\t\tinputField: "input",\n\t\t\t\t\t\t\tinputFallback: inputDefaults.get(textOf(model, "id")) ?? props.defaultInput,',
+  '\t\t\t\t\t\t\tinputField: "input",\n\t\t\t\t\t\t\tthinkingPresets: props.thinkingPresets,\n\t\t\t\t\t\t\tinputFallback: props.thinkingPresets && CLAUDE_KNOWN_MODELS[model.id] ? ["text", "image"] : inputDefaults.get(textOf(model, "id")) ?? props.defaultInput,',
 )
 
 replaceOnce(
@@ -291,8 +298,8 @@ replaceOnce(
 
 replaceOnce(
   'existing Anthropic card enables thinking presets',
-  '\t\t\t\t\t\t\t\t...catalogProps,\n\t\t\t\t\t\t\t\tprobe,\n\t\t\t\t\t\t\t\tprobeBlocked: keyFailure,\n\t\t\t\t\t\t\t\toperations',
-  '\t\t\t\t\t\t\t\t...catalogProps,\n\t\t\t\t\t\t\t\tprobe,\n\t\t\t\t\t\t\t\tprobeBlocked: keyFailure,\n\t\t\t\t\t\t\t\tthinkingPresets: props.thinkingPresets === true,\n\t\t\t\t\t\t\t\toperations',
+  '\t\t\t\t\t\t\t\t...catalogProps,\n\t\t\t\t\t\t\t\tcatalogProvider: props.declared === true ? void 0 : props.provider,\n\t\t\t\t\t\t\t\tdefaultInput: Array.isArray(defaultInput) ? defaultInput : void 0,\n\t\t\t\t\t\t\t\tprobe,\n\t\t\t\t\t\t\t\tprobeBlocked: keyFailure,\n\t\t\t\t\t\t\t\toperations',
+  '\t\t\t\t\t\t\t\t...catalogProps,\n\t\t\t\t\t\t\t\tcatalogProvider: props.declared === true ? void 0 : props.provider,\n\t\t\t\t\t\t\t\tdefaultInput: Array.isArray(defaultInput) ? defaultInput : void 0,\n\t\t\t\t\t\t\t\tprobe,\n\t\t\t\t\t\t\t\tprobeBlocked: keyFailure,\n\t\t\t\t\t\t\t\tthinkingPresets: props.thinkingPresets === true,\n\t\t\t\t\t\t\t\toperations',
 )
 
 replaceOnce(

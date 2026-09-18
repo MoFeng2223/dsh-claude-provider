@@ -17,12 +17,58 @@ import {
 const builtClient = readFileSync(new URL('../lib/client.js', import.meta.url), 'utf8')
 const packageManifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
 
-function clientFunction(name) {
+function clientFunction(name, bindings = {}) {
   const start = builtClient.indexOf(`function ${name}(`)
   const end = builtClient.indexOf('\n\t\t}', start)
   assert.ok(start >= 0 && end > start)
-  return new Function(`${builtClient.slice(start, end + 4)}; return ${name};`)()
+  return new Function(...Object.keys(bindings), `${builtClient.slice(start, end + 4)}; return ${name};`)(...Object.values(bindings))
 }
+
+test('known Claude input defaults preserve explicit choices and unknown models', () => {
+  const defaults = clientFunction('withKnownClaudeInput', { CLAUDE_KNOWN_MODELS })
+  for (const id of Object.keys(CLAUDE_KNOWN_MODELS)) {
+    assert.deepEqual(defaults({ id }).input, ['text', 'image'])
+    assert.deepEqual(defaults({ id, input: ['text'] }).input, ['text'])
+    assert.deepEqual(defaults({ id, input: [] }).input, ['text', 'image'])
+  }
+  assert.deepEqual(defaults({ id: 'unknown' }), { id: 'unknown' })
+  const native = clientFunction('withNativeClaudeModel', {
+    withKnownClaudeInput: defaults,
+    withDefaultClaudeReasoning: model => model,
+  })
+  const model = { id: 'claude-opus-5', reasoningEfforts: { low: 'low', medium: 'medium', high: 'high', max: 'max' }, compat: { custom: true } }
+  assert.deepEqual(native(model).input, ['text', 'image'])
+  assert.deepEqual(native(model).compat, { custom: true, forceAdaptiveThinking: true })
+  assert.deepEqual(native({ ...model, input: ['text'] }).input, ['text'])
+})
+
+test('shared model row keeps input controls and scopes thinking presets to Claude', () => {
+  const jsx = (type, props) => ({ type, props })
+  const row = clientFunction('ModelRow', {
+    react_jsx_runtime: { jsx, jsxs: jsx },
+    ModelsSection_module_css_default: {},
+    _deepseek_ai_dsh_client_ui_primitives: {},
+    ModelInputTypes: 'input-types',
+    thinkingPresetOf: () => 'five',
+    reasoningEffortsForPreset: preset => ({ selected: preset }),
+  })
+  const collect = (tree, type) => {
+    if (!tree || typeof tree !== 'object') return []
+    if (Array.isArray(tree)) return tree.flatMap(item => collect(item, type))
+    return [...(tree.type === type ? [tree] : []), ...collect(tree.props?.children, type)]
+  }
+  let changed
+  const model = { id: 'claude-opus-5', input: ['text'], maxTokens: 123 }
+  const props = { model, position: 1, t: key => key, expanded: true, disabled: false,
+    inputField: 'input', inputFallback: ['text', 'image'], contextWindow: {}, maxTokens: {},
+    onChange: next => { changed = next } }
+  assert.equal(collect(row(props), 'select').length, 0)
+  const tree = row({ ...props, thinkingPresets: true })
+  assert.equal(collect(tree, 'input-types').length, 1)
+  const selector = collect(tree, 'select')[0]
+  selector.props.onChange({ target: { value: 'four' } })
+  assert.deepEqual(changed, { ...model, reasoningEfforts: { selected: 'four' } })
+})
 
 test('RC2 URL validation accepts HTTP endpoints and rejects invalid protocols', () => {
   const valid = clientFunction('isHttpUrl')
@@ -44,10 +90,10 @@ test('RC2 provider diagnostics survive the directory join even for inactive prov
   assert.match(builtClient, /role: "alert",[\s\S]*?children: row\.entry\.error/)
 })
 
-test('builds the forked section against DSH 0.1.6-alpha.1', () => {
+test('builds the forked section against DSH 0.1.6-alpha.2', () => {
   assert.equal(packageManifest.exports['./client'], './lib/client.js')
   assert.equal(packageManifest.scripts.build, 'node scripts/build-client.mjs')
-  assert.equal(packageManifest.devDependencies['@deepseek-ai/dsh-client-ui-settings-models'], '0.1.6-alpha.1')
+  assert.equal(packageManifest.devDependencies['@deepseek-ai/dsh-client-ui-settings-models'], '0.1.6-alpha.2')
   assert.ok(!packageManifest.dsh.client.inject.includes('@deepseek-ai/dsh-client-runtime'))
 })
 
