@@ -1,5 +1,5 @@
 - insert:
-    - id: claude-provider
+    - id: dsh-claude-provider
       name: '@mofeng2223/dsh-claude-provider'
 - id: ui-settings-models
   disabled: true

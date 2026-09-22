@@ -6,8 +6,8 @@ export const inject = ['llm', 'settings']
 export const CLAUDE_PROVIDER_TYPE = 'claude-adaptive'
 export const CLAUDE_PROVIDER_SETTINGS_NS = 'dsh-claude-provider'
 
-const ProviderTypeSettings = z.object({
-  providerTypes: z.dict(z.const(CLAUDE_PROVIDER_TYPE)).default({}),
+export const Config = z.object({
+  providerTypes: z.dict(z.const(CLAUDE_PROVIDER_TYPE)).default({}).volatile(),
 })
 
 export const CLAUDE_DISCOVERY_API = 'mofeng-anthropic-models'
@@ -207,7 +207,7 @@ export async function discoverAnthropicModels({ baseURL, apiKey, signal, fetchIm
 
 function configuredCredentialRef(ctx, provider) {
   if (typeof provider !== 'string' || provider.length === 0) return undefined
-  const section = ctx.get('settings')?.get(PI_AI_SETTINGS_NS)
+  const section = ctx.get('settings')?.describe().find(entry => entry.ns === PI_AI_SETTINGS_NS)?.value
   const profile = section?.providers?.[provider]
   const ref = profile?.apiKeyEnv
   return typeof ref === 'string' && ref.length > 0 ? ref : undefined
@@ -260,10 +260,5 @@ function installClaudeModelDiscovery(ctx) {
 }
 
 export function apply(ctx) {
-  ctx.settings.register(
-    CLAUDE_PROVIDER_SETTINGS_NS,
-    ProviderTypeSettings,
-    { base: { providerTypes: {} } },
-  )
   installClaudeModelDiscovery(ctx)
 }

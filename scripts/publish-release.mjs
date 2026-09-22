@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { setTimeout } from 'node:timers/promises'
 
@@ -76,5 +76,6 @@ npm: \`${manifest.name}@${manifest.version}\`
 
 npm：\`${manifest.name}@${manifest.version}\`
 `
-writeFileSync(`${process.env.RUNNER_TEMP}/release-notes.md`, body)
+const reviewedNotes = `docs/releases/v${manifest.version}.md`
+writeFileSync(`${process.env.RUNNER_TEMP}/release-notes.md`, existsSync(reviewedNotes) ? readFileSync(reviewedNotes, 'utf8') : body)
 console.log('npm version, integrity and latest tag verified')

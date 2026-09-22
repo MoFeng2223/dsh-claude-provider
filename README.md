@@ -2,7 +2,7 @@
 
 English | [简体中文](./README.zh-CN.md)
 
-DSH Claude Provider adds a dedicated Claude configuration interface to DeepSeek Harness. You can add multiple Claude providers, choose reasoning levels for each model, and automatically fetch model lists and fill in capacity settings and reasoning presets for common Claude models, without editing `settings.yaml` manually.
+DSH Claude Provider adds a dedicated Claude configuration interface to DeepSeek Harness. You can add multiple Claude providers, choose reasoning levels for each model, and automatically fetch model lists and fill in capacity settings and reasoning presets for common Claude models, without editing configuration files manually.
 
 Compared with the official generic custom provider form, the plugin adds a dedicated Claude entry, five-level, four-level, and on/off reasoning presets, and automatic defaults for known Claude models. DeepSeek Harness handles the saved reasoning configuration natively.
 
@@ -10,16 +10,10 @@ Compared with the official generic custom provider form, the plugin adds a dedic
 
 1. **Adds a dedicated Claude provider type**
 
-   The Models settings page gains a separate **Claude Provider** form.
+   Open **Settings → Models → Add model provider → Claude provider** to use the dedicated Anthropic Messages form.
 
 <p align="center">
-  <img src="./docs/images/provider-entry.en.jpg" alt="Add Claude Provider entry in DeepSeek Harness" width="580">
-</p>
-
-   Selecting **Add Claude Provider** opens the dedicated Anthropic Messages form:
-
-<p align="center">
-  <img src="./docs/images/claude-provider-form.en.jpg" alt="Claude Provider form in DeepSeek Harness" width="580">
+  <img src="./docs/images/claude-provider-tabs.en.png" alt="Claude provider tab and configuration form" width="580">
 </p>
 
 2. **Adds model-specific reasoning modes**
@@ -35,7 +29,7 @@ Compared with the official generic custom provider form, the plugin adds a dedic
    On save, the plugin writes each model's reasoning levels and adaptive thinking settings to DeepSeek Harness's native configuration.
 
 <p align="center">
-  <img src="./docs/images/model-defaults.en.jpg" alt="Claude model capacity defaults and reasoning modes" width="580">
+  <img src="./docs/images/model-options.en.png" alt="Claude model capacity defaults and reasoning modes" width="580">
 </p>
 
 3. **Supports paginated Anthropic model discovery**
@@ -87,7 +81,25 @@ npx @deepseek-ai/dsh plugin --profile web add ./dist/mofeng2223-dsh-claude-provi
 npx @deepseek-ai/dsh plugin --profile web remove @mofeng2223/dsh-claude-provider
 ```
 
-Uninstalling the plugin does not delete `~/.dsh/settings.yaml` or stored credentials. Existing Claude providers remain ordinary custom `anthropic-messages` providers, and their saved reasoning levels and adaptive thinking settings remain effective. The dedicated Claude add/edit interface, paginated model discovery, and automatic defaults are no longer available; the official model discovery feature remains available.
+Uninstalling the plugin does not delete official model settings or stored credentials. Existing Claude providers remain ordinary custom `anthropic-messages` providers, and their saved reasoning levels and adaptive thinking settings remain effective. The dedicated Claude add/edit interface, paginated model discovery, and automatic defaults are no longer available; the official model discovery feature remains available.
+
+## DSH 0.1.7 upgrade and configuration migration
+
+This version targets DSH 0.1.7-alpha.2.
+
+### 1. The new DSH version is not installed yet
+
+Stop DSH, update DSH and the Claude plugin, then start DSH. On its first launch, the new DSH version attempts to migrate the old `settings.yaml` into the current Profile.
+
+### 2. The new DSH version is installed but has not been run
+
+Migration has not started yet. Update the Claude plugin and any other plugins requiring compatibility updates before starting DSH. DSH attempts to migrate the old Settings configuration on its first launch.
+
+### 3. The new DSH version has already been run
+
+DSH has already attempted automatic Settings migration, and some settings may have migration issues.
+
+For this plugin, the possible impact is limited to missing Claude provider type markers. **Model configuration and operation are unaffected by the missing markers.**
 
 ## License
 

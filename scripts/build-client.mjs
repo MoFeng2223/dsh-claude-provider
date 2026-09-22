@@ -202,11 +202,6 @@ replaceOnce(
   '\t\t\t\tconst credentialDraft = layout === "pi-ai" && stringAt(draft, "apiKeyEnv") === void 0 && stringAt(fallback, "apiKeyEnv") === void 0 && keyValue.length > 0 ? schema.setPath(draft, ["apiKeyEnv"], keyRef) : draft;\n\t\t\t\tconst next = props.thinkingPresets === true ? withNativeClaudeProfile(credentialDraft) : credentialDraft;',
 )
 
-replaceOnce(
-  'Claude provider card title',
-  '\t\t\t\t\t\t\tchildren: t("customTitle")',
-  '\t\t\t\t\t\t\tchildren: t(isAdaptiveClaude ? "claudeCustomTitle" : "customTitle")',
-)
 
 replaceOnce(
   'persist Claude provider type after profile creation',
@@ -281,7 +276,7 @@ replaceOnce(
 replaceOnce(
   'shared model row Claude controls',
   '\t\t\t\t\t\tonChange: props.onChange\n\t\t\t\t\t})]',
-  '\t\t\t\t\t\tonChange: props.onChange\n\t\t\t\t\t}), props.thinkingPresets ? (0, react_jsx_runtime.jsxs)("label", {\n\t\t\t\t\t\tclassName: ModelsSection_module_css_default["modelField"],\n\t\t\t\t\t\tchildren: [t("thinkingPreset"), (0, react_jsx_runtime.jsxs)("select", {\n\t\t\t\t\t\t\tclassName: ModelsSection_module_css_default["input"],\n\t\t\t\t\t\t\tvalue: thinkingPresetOf(model),\n\t\t\t\t\t\t\t"aria-label": t("thinkingPreset") + " " + position,\n\t\t\t\t\t\t\tdisabled,\n\t\t\t\t\t\t\tonChange: (event) => props.onChange({ ...model, reasoningEfforts: reasoningEffortsForPreset(event.target.value) }),\n\t\t\t\t\t\t\tchildren: ["toggle", "four", "five"].map((preset) => (0, react_jsx_runtime.jsx)("option", { value: preset, children: t({ toggle: "thinkingPresetToggle", four: "thinkingPresetFour", five: "thinkingPresetFive" }[preset]) }, preset))\n\t\t\t\t\t\t})]\n\t\t\t\t\t}) : null]',
+  '\t\t\t\t\t\tonChange: props.onChange\n\t\t\t\t\t}), props.thinkingPresets ? (0, react_jsx_runtime.jsxs)("label", {\n\t\t\t\t\t\tclassName: ModelsSection_module_css_default["modelField"],\n\t\t\t\t\t\tchildren: [t("thinkingPreset"), (0, react_jsx_runtime.jsxs)("select", {\n\t\t\t\t\t\t\tclassName: ModelsSection_module_css_default["input"] + " " + ModelsSection_module_css_default["selectInput"],\n\t\t\t\t\t\t\tvalue: thinkingPresetOf(model),\n\t\t\t\t\t\t\t"aria-label": t("thinkingPreset") + " " + position,\n\t\t\t\t\t\t\tdisabled,\n\t\t\t\t\t\t\tonChange: (event) => props.onChange({ ...model, reasoningEfforts: reasoningEffortsForPreset(event.target.value) }),\n\t\t\t\t\t\t\tchildren: ["toggle", "four", "five"].map((preset) => (0, react_jsx_runtime.jsx)("option", { value: preset, children: t({ toggle: "thinkingPresetToggle", four: "thinkingPresetFour", five: "thinkingPresetFive" }[preset]) }, preset))\n\t\t\t\t\t\t})]\n\t\t\t\t\t}) : null]',
 )
 
 replaceOnce(
@@ -302,44 +297,52 @@ replaceOnce(
   '\t\t\t\t\t\t\t\t...catalogProps,\n\t\t\t\t\t\t\t\tcatalogProvider: props.declared === true ? void 0 : props.provider,\n\t\t\t\t\t\t\t\tdefaultInput: Array.isArray(defaultInput) ? defaultInput : void 0,\n\t\t\t\t\t\t\t\tprobe,\n\t\t\t\t\t\t\t\tprobeBlocked: keyFailure,\n\t\t\t\t\t\t\t\tthinkingPresets: props.thinkingPresets === true,\n\t\t\t\t\t\t\t\toperations',
 )
 
-replaceOnce(
-  'separate provider declaration type state',
-  '\t\t\tconst [declaring, setDeclaring] = (0, react.useState)(false);',
-  '\t\t\tconst [declaringType, setDeclaringType] = (0, react.useState)(void 0);',
-)
 
-source = source.replaceAll('setDeclaring(false)', 'setDeclaringType(void 0)')
-source = source.replaceAll('setDeclaring(true)', 'setDeclaringType("generic")')
 
-replaceOnce(
-  'provider declaration branch',
-  '\t\t\t\t\t}) : declaring ? (0, react_jsx_runtime.jsx)("div", {',
-  '\t\t\t\t\t}) : declaringType !== void 0 ? (0, react_jsx_runtime.jsx)("div", {',
-)
 
-replaceOnce(
-  'provider declaration card type',
-  '\t\t\t\t\t\t\t\ttaken: state.rows.map((row) => row.entry.provider),\n\t\t\t\t\t\t\t\tprotocols,',
-  '\t\t\t\t\t\t\t\ttaken: state.rows.map((row) => row.entry.provider),\n\t\t\t\t\t\t\t\tprotocols,\n\t\t\t\t\t\t\t\tproviderType: declaringType,',
-)
 
-replaceOnce(
-  'separate Claude provider add button',
-  't("customAdd")]\n\t\t\t\t\t\t\t})]',
-  't("customAdd")]\n\t\t\t\t\t\t\t}), (0, react_jsx_runtime.jsxs)("button", {\n\t\t\t\t\t\t\t\ttype: "button",\n\t\t\t\t\t\t\t\tclassName: ModelsSection_module_css_default["addButton"],\n\t\t\t\t\t\t\t\tdisabled: !state.namespaces.has("llm-pi-ai") || !state.namespaces.has(CLAUDE_PROVIDER_SETTINGS_NS) || !state.writable,\n\t\t\t\t\t\t\t\tonClick: () => {\n\t\t\t\t\t\t\t\t\tsetSavedTarget(void 0);\n\t\t\t\t\t\t\t\t\tsetAdding(false);\n\t\t\t\t\t\t\t\t\tsetEditing(void 0);\n\t\t\t\t\t\t\t\t\tsetDeclaringType(CLAUDE_PROVIDER_TYPE);\n\t\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\t\tchildren: [(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutline16, { size: 14 }), t("claudeCustomAdd")]\n\t\t\t\t\t\t\t})]',
-)
+
+
 
 replaceOnce(
   'English Claude copy',
-  '\t\t\tcustomTitle: "Custom provider",\n\t\t\tcustomTag: "Custom",',
-  '\t\t\tcustomTitle: "Custom provider",\n\t\t\tcustomTag: "Custom",\n\t\t\tclaudeCustomAdd: "Add Claude provider",\n\t\t\tclaudeCustomTitle: "Claude provider",\n\t\t\tclaudeTypeUnavailable: "Claude provider type storage is unavailable.",\n\t\t\tclaudeTypeTag: "Claude provider",\n\t\t\tclaudeTypeIntro: "This provider type saves native RC8 adaptive-thinking compatibility, model reasoning mappings, Claude model discovery, and recorded capacities.",\n\t\t\tadaptiveClaudeEnabled: "Choose a thinking mode for each model; new models default to five levels.",\n\t\t\tadaptiveClaudeHelpLabel: "Thinking mode help",\n\t\t\tadaptiveClaudeHelp: "Five (low / medium / high / xhigh / max): Fable 5.1, Fable 5, Opus 5, Opus 4.8, Opus 4.7, Sonnet 5\\nFour (low / medium / high / max): Opus 4.6, Sonnet 4.6\\nOn / Off: Haiku 4.5",\n\t\t\tadaptiveClaudeTag: "Claude configured",\n\t\t\tthinkingPreset: "Thinking mode",\n\t\t\tthinkingPresetToggle: "On / Off",\n\t\t\tthinkingPresetFour: "Four levels",\n\t\t\tthinkingPresetFive: "Five levels (default)",',
+  '\t\t\tcustomTag: "Custom",',
+  '\t\t\tcustomTag: "Custom",\n\t\t\tclaudeCustomAdd: "Add Claude provider",\n\t\t\tclaudeCustomTitle: "Claude provider",\n\t\t\tclaudeTypeUnavailable: "Claude provider type storage is unavailable.",\n\t\t\tclaudeTypeTag: "Claude provider",\n\t\t\tclaudeTypeIntro: "This provider type saves native RC8 adaptive-thinking compatibility, model reasoning mappings, Claude model discovery, and recorded capacities.",\n\t\t\tadaptiveClaudeEnabled: "Choose a thinking mode for each model; new models default to five levels.",\n\t\t\tadaptiveClaudeHelpLabel: "Thinking mode help",\n\t\t\tadaptiveClaudeHelp: "Five (low / medium / high / xhigh / max): Fable 5.1, Fable 5, Opus 5, Opus 4.8, Opus 4.7, Sonnet 5\\nFour (low / medium / high / max): Opus 4.6, Sonnet 4.6\\nOn / Off: Haiku 4.5",\n\t\t\tadaptiveClaudeTag: "Claude configured",\n\t\t\tthinkingPreset: "Thinking mode",\n\t\t\tthinkingPresetToggle: "On / Off",\n\t\t\tthinkingPresetFour: "Four levels",\n\t\t\tthinkingPresetFive: "Five levels (default)",',
 )
 
 replaceOnce(
   'Chinese Claude copy',
-  '\t\t\tcustomTitle: "自定义提供方",\n\t\t\tcustomTag: "自定义",',
-  '\t\t\tcustomTitle: "自定义提供方",\n\t\t\tcustomTag: "自定义",\n\t\t\tclaudeCustomAdd: "添加 Claude 提供方",\n\t\t\tclaudeCustomTitle: "Claude 提供方",\n\t\t\tclaudeTypeUnavailable: "Claude 提供方类型存储不可用。",\n\t\t\tclaudeTypeTag: "Claude 提供方",\n\t\t\tclaudeTypeIntro: "此提供方类型会写入 RC8 原生自适应思考兼容配置、模型思考映射、Claude 模型发现和已记录容量。",\n\t\t\tadaptiveClaudeEnabled: "每个模型可单独选择思考模式，新增模型默认使用五档。",\n\t\t\tadaptiveClaudeHelpLabel: "思考模式说明",\n\t\t\tadaptiveClaudeHelp: "五档（低 / 中 / 高 / 超高 / 最大）：Fable 5.1、Fable 5、Opus 5、Opus 4.8、Opus 4.7、Sonnet 5\\n四档（低 / 中 / 高 / 最大）：Opus 4.6、Sonnet 4.6\\n开启 / 关闭：Haiku 4.5",\n\t\t\tadaptiveClaudeTag: "Claude 已适配",\n\t\t\tthinkingPreset: "思考模式",\n\t\t\tthinkingPresetToggle: "开启 / 关闭",\n\t\t\tthinkingPresetFour: "四档",\n\t\t\tthinkingPresetFive: "五档（默认）",',
+  '\t\t\tcustomTag: "自定义",',
+  '\t\t\tcustomTag: "自定义",\n\t\t\tclaudeCustomAdd: "添加 Claude 提供方",\n\t\t\tclaudeCustomTitle: "Claude 提供方",\n\t\t\tclaudeTypeUnavailable: "Claude 提供方类型存储不可用。",\n\t\t\tclaudeTypeTag: "Claude 提供方",\n\t\t\tclaudeTypeIntro: "此提供方类型会写入 RC8 原生自适应思考兼容配置、模型思考映射、Claude 模型发现和已记录容量。",\n\t\t\tadaptiveClaudeEnabled: "每个模型可单独选择思考模式，新增模型默认使用五档。",\n\t\t\tadaptiveClaudeHelpLabel: "思考模式说明",\n\t\t\tadaptiveClaudeHelp: "五档（低 / 中 / 高 / 超高 / 最大）：Fable 5.1、Fable 5、Opus 5、Opus 4.8、Opus 4.7、Sonnet 5\\n四档（低 / 中 / 高 / 最大）：Opus 4.6、Sonnet 4.6\\n开启 / 关闭：Haiku 4.5",\n\t\t\tadaptiveClaudeTag: "Claude 已适配",\n\t\t\tthinkingPreset: "思考模式",\n\t\t\tthinkingPresetToggle: "开启 / 关闭",\n\t\t\tthinkingPresetFour: "四档",\n\t\t\tthinkingPresetFive: "五档（默认）",',
 )
+
+
+
+
+replaceOnce('Claude tab busy state',
+  'const [customBusy, setCustomBusy] = (0, react.useState)(false);',
+  'const [customBusy, setCustomBusy] = (0, react.useState)(false);\n\t\t\tconst [claudeBusy, setClaudeBusy] = (0, react.useState)(false);')
+replaceOnce('reset Claude busy state', 'setCustomBusy(false);', 'setCustomBusy(false);\n\t\t\t\tsetClaudeBusy(false);')
+replaceOnce('lock all provider tabs during requests', 'const switchLocked = catalogBusy || customBusy;', 'const switchLocked = catalogBusy || customBusy || claudeBusy;')
+replaceOnce('allow Claude tab without catalog', 'const bothOffered = catalogOffered && customOffered;', 'const claudeEnabled = customEnabled && state.namespaces.has(CLAUDE_PROVIDER_SETTINGS_NS);\n\t\t\tconst bothOffered = customOffered;')
+replaceOnce('Claude provider option',
+  '...customEnabled ? {} : { title: t("addCustomUnavailable") }\n\t\t\t\t\t\t\t\t\t\t}],',
+  '...customEnabled ? {} : { title: t("addCustomUnavailable") }\n\t\t\t\t\t\t\t\t\t\t}, { value: "claude", label: t("claudeCustomTitle"), disabled: !claudeEnabled }],')
+// Keep independent mounted cards so switching modes preserves both drafts.
+const panelStart = source.indexOf('\t\t\t\t\t\t\t\tmounted("custom") && piAi !== void 0');
+const panelEnd = source.indexOf('}) : null', panelStart) + '}) : null'.length;
+if (panelStart < 0 || panelEnd < panelStart) throw new Error('custom panel not found');
+const customPanel = source.slice(panelStart, panelEnd);
+const claudePanel = customPanel.replaceAll('"custom"', '"claude"')
+  .replaceAll('-custom', '-claude')
+  .replace('taken: state.rows', 'providerType: CLAUDE_PROVIDER_TYPE,\n\t\t\t\t\t\t\t\t\t\ttaken: state.rows')
+  .replace('onBusyChange: setCustomBusy', 'onBusyChange: setClaudeBusy');
+source = source.slice(0, panelEnd) + ',\n' + claudePanel + source.slice(panelEnd);
+
+replaceOnce('hide generic hint on Claude tab', "className: ModelsSection_module_css_default[\"advancedHint\"],\n\t\t\t\t\t\t\t\t\t\tchildren: t(mode === \"catalog\" ? \"addCatalogHint\" : \"addCustomHint\")", "hidden: mode === \"claude\",\n\t\t\t\t\t\t\t\t\t\tclassName: ModelsSection_module_css_default[\"advancedHint\"],\n\t\t\t\t\t\t\t\t\t\tchildren: t(mode === \"catalog\" ? \"addCatalogHint\" : \"addCustomHint\")")
+
+replaceOnce('compact English provider tabs', 'addCatalog: "Third-party model provider",', 'addCatalog: "Third-party providers",')
+replaceOnce('compact English custom API tab', 'addCustom: "Custom model API",', 'addCustom: "Custom API",')
 
 await mkdir(dirname(outputPath), { recursive: true })
 await writeFile(outputPath, source)
