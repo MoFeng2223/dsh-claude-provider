@@ -112,6 +112,7 @@ replaceOnce(
 \t\t\t"claude-opus-4-7": Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: "five" }),
 \t\t\t"claude-opus-4-8": Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: "five" }),
 \t\t\t"claude-opus-5": Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: "five" }),
+\t\t\t"claude-opus-5-5": Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: "five" }),
 \t\t\t"claude-sonnet-4-6": Object.freeze({ contextWindow: 1000000, maxTokens: 64000, preset: "four" }),
 \t\t\t"claude-sonnet-5": Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: "five" })
 \t\t});`,

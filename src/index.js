@@ -26,6 +26,7 @@ export const CLAUDE_KNOWN_MODELS = Object.freeze({
   'claude-opus-4-7': Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: 'five' }),
   'claude-opus-4-8': Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: 'five' }),
   'claude-opus-5': Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: 'five' }),
+  'claude-opus-5-5': Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: 'five' }),
   'claude-sonnet-4-6': Object.freeze({ contextWindow: 1000000, maxTokens: 64000, preset: 'four' }),
   'claude-sonnet-5': Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: 'five' }),
 })
