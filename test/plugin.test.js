@@ -90,10 +90,10 @@ test('RC2 provider diagnostics survive the directory join even for inactive prov
   assert.match(builtClient, /role: "alert",[\s\S]*?children: row\.entry\.error/)
 })
 
-test('builds the forked section against DSH 0.1.7-rc.1', () => {
+test('builds the forked section against DSH 0.1.7-rc.2', () => {
   assert.equal(packageManifest.exports['./client'], './lib/client.js')
   assert.equal(packageManifest.scripts.build, 'node scripts/build-client.mjs')
-  assert.equal(packageManifest.devDependencies['@deepseek-ai/dsh-client-ui-settings-models'], '0.1.7-rc.1')
+  assert.equal(packageManifest.devDependencies['@deepseek-ai/dsh-client-ui-settings-models'], '0.1.7-rc.2')
   assert.ok(!packageManifest.dsh.client.inject.includes('@deepseek-ai/dsh-client-runtime'))
 })
 
@@ -298,4 +298,16 @@ test('Opus 5.5 discovery and saved model use official capacities, vision and ada
   assert.deepEqual(saved.input, ['text', 'image'])
   assert.deepEqual(saved.reasoningEfforts, five)
   assert.equal(saved.compat.forceAdaptiveThinking, true)
+})
+
+test('rc.2 keeps account-first ordering and does not require API-key credentials for account models', () => {
+  const join = clientFunction('joinProviderDirectory')
+  const ids = ['claude-a', 'deepseek-official', 'other', 'deepseek-account', 'claude-b']
+  const rows = join([], ids.map(provider => ({ provider, displayName: provider, settingsNs: 'example', settingsPath: [] })))
+  assert.deepEqual(rows.map(row => row.provider), ['deepseek-account', 'deepseek-official', 'claude-a', 'other', 'claude-b'])
+  const usable = clientFunction('providerUsable')
+  const account = { entry: { provider: 'deepseek-account', active: true }, accountAvailable: true }
+  assert.equal(usable(account), true)
+  assert.equal(usable({ ...account, accountAvailable: false }), false)
+  assert.equal(usable({ entry: { provider: 'claude-a', active: true }, apiKeyEnv: 'TEST', credential: { configured: false } }), false)
 })
