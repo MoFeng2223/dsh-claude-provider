@@ -90,10 +90,10 @@ test('RC2 provider diagnostics survive the directory join even for inactive prov
   assert.match(builtClient, /role: "alert",[\s\S]*?children: row\.entry\.error/)
 })
 
-test('builds the forked section against DSH 0.2.0-rc.1', () => {
+test('builds the forked section against DSH 0.2.0-rc.2', () => {
   assert.equal(packageManifest.exports['./client'], './lib/client.js')
   assert.equal(packageManifest.scripts.build, 'node scripts/build-client.mjs')
-  assert.equal(packageManifest.devDependencies['@deepseek-ai/dsh-client-ui-settings-models'], '0.2.0-rc.1')
+  assert.equal(packageManifest.devDependencies['@deepseek-ai/dsh-client-ui-settings-models'], '0.2.0-rc.2')
   assert.ok(!packageManifest.dsh.client.inject.includes('@deepseek-ai/dsh-client-runtime'))
 })
 
