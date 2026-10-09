@@ -90,10 +90,10 @@ test('RC2 provider diagnostics survive the directory join even for inactive prov
   assert.match(builtClient, /role: "alert",[\s\S]*?children: row\.entry\.error/)
 })
 
-test('builds the forked section against DSH 0.2.1-alpha.1', () => {
+test('builds the forked section against DSH 0.2.1-alpha.2', () => {
   assert.equal(packageManifest.exports['./client'], './lib/client.js')
   assert.equal(packageManifest.scripts.build, 'node scripts/build-client.mjs')
-  assert.equal(packageManifest.devDependencies['@deepseek-ai/dsh-client-ui-settings-models'], '0.2.1-alpha.1')
+  assert.equal(packageManifest.devDependencies['@deepseek-ai/dsh-client-ui-settings-models'], '0.2.1-alpha.2')
   assert.ok(!packageManifest.dsh.client.inject.includes('@deepseek-ai/dsh-client-runtime'))
 })
 
@@ -360,4 +360,30 @@ test('rc.2 keeps account-first ordering and does not require API-key credentials
   assert.equal(usable(account), true)
   assert.equal(usable({ ...account, accountAvailable: false }), false)
   assert.equal(usable({ entry: { provider: 'claude-a', active: true }, apiKeyEnv: 'TEST', credential: { configured: false } }), false)
+})
+
+test('overlapping model refreshes settle together only after the latest snapshot is ready', async () => {
+  const start = builtClient.indexOf('var ModelsSettingsStore = class {')
+  const end = builtClient.indexOf('\n\t\t};', start)
+  assert.ok(start >= 0 && end > start)
+  const createSnapshotStore = state => ({ update: fn => fn(state), getSnapshot: () => state })
+  const Store = new Function('_deepseek_ai_dsh_client_store', 'joinProviderDirectory',
+    `${builtClient.slice(start, end + 5)}; return ModelsSettingsStore;`)(
+    { createSnapshotStore }, () => [])
+  const requests = []
+  const controller = new Store({ remote: { llm: {
+    listProviders: () => { const read = Promise.withResolvers(); requests.push(read); return read.promise },
+    listConfigurableProviders: async () => ({ ok: true, value: [] }),
+  } } }, {}, { ensure: async () => {}, getSnapshot: () => ({ view: { writable: true, namespaces: [] } }) })
+  let settled = 0
+  const old = controller.load().then(() => settled++)
+  const latest = controller.load().then(() => settled++)
+  requests[0].resolve({ ok: true, value: [] })
+  await new Promise(resolve => setImmediate(resolve))
+  assert.equal(settled, 0)
+  assert.equal(controller.store.getSnapshot().status, 'loading')
+  requests[1].resolve({ ok: true, value: [] })
+  await Promise.all([old, latest])
+  assert.equal(settled, 2)
+  assert.equal(controller.store.getSnapshot().status, 'ready')
 })
