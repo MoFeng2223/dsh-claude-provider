@@ -250,15 +250,15 @@ replaceOnce(
 
 replaceExactly(
   'Claude type in setup and open provider editors',
-  "\ttarget,\n\t\t\t\t\t\t\t\t\t\tnamespace,\n\t\t\t\t\t\t\t\t\t\tschema,\n\t\t\t\t\t\t\t\t\t\toperations,\n\t\t\t\t\t\t\t\t\t\tt,\n\t\t\t\t\t\t\t\t\t\treadOnly:",
-  "\ttarget,\n\t\t\t\t\t\t\t\t\t\tnamespace,\n\t\t\t\t\t\t\t\t\t\tschema,\n\t\t\t\t\t\t\t\t\t\tthinkingPresets: isClaudeProvider(row, state),\n\t\t\t\t\t\t\t\t\t\toperations,\n\t\t\t\t\t\t\t\t\t\tt,\n\t\t\t\t\t\t\t\t\t\treadOnly:",
+  '\t\t\t\t\t\t\t\t\t\trow,\n\t\t\t\t\t\t\t\t\t\tnamespace,',
+  '\t\t\t\t\t\t\t\t\t\trow,\n\t\t\t\t\t\t\t\t\t\tthinkingPresets: isClaudeProvider(row, state),\n\t\t\t\t\t\t\t\t\t\tnamespace,',
   2,
 )
 
 replaceOnce(
   'row Claude badge',
-  'children: t("customTag")\n\t\t\t\t\t\t\t\t\t\t\t\t}) : null,\n\t\t\t\t\t\t\t\t\t\t\t\tcredentialConfigured ?',
-  'children: t("customTag")\n\t\t\t\t\t\t\t\t\t\t\t\t}) : null,\n\t\t\t\t\t\t\t\t\t\t\t\tadaptiveClaude ? (0, react_jsx_runtime.jsx)("span", {\n\t\t\t\t\t\t\t\t\t\t\t\t\tclassName: ModelsSection_module_css_default["rowTag"],\n\t\t\t\t\t\t\t\t\t\t\t\t\tchildren: t("adaptiveClaudeTag")\n\t\t\t\t\t\t\t\t\t\t\t\t}) : null,\n\t\t\t\t\t\t\t\t\t\t\t\tcredentialConfigured ?',
+  '\t\t\t\t\t\t\t\t\t\t\t\trow.entry.provider === "deepseek-account" ?',
+  '\t\t\t\t\t\t\t\t\t\t\t\tadaptiveClaude ? (0, react_jsx_runtime.jsx)("span", {\n\t\t\t\t\t\t\t\t\t\t\t\t\tclassName: ModelsSection_module_css_default["rowTag"],\n\t\t\t\t\t\t\t\t\t\t\t\t\tchildren: t("adaptiveClaudeTag")\n\t\t\t\t\t\t\t\t\t\t\t\t}) : null,\n\t\t\t\t\t\t\t\t\t\t\t\trow.entry.provider === "deepseek-account" ?',
 )
 
 source = source.replaceAll('children: t("adaptiveClaudeTag")', 'children: t("claudeTypeTag")')

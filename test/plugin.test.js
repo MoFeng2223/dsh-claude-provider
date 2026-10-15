@@ -90,10 +90,10 @@ test('RC2 provider diagnostics survive the directory join even for inactive prov
   assert.match(builtClient, /role: "alert",[\s\S]*?children: row\.entry\.error/)
 })
 
-test('builds the forked section against DSH 0.2.1-alpha.2', () => {
+test('builds the forked section against DSH 0.2.1-alpha.3', () => {
   assert.equal(packageManifest.exports['./client'], './lib/client.js')
   assert.equal(packageManifest.scripts.build, 'node scripts/build-client.mjs')
-  assert.equal(packageManifest.devDependencies['@deepseek-ai/dsh-client-ui-settings-models'], '0.2.1-alpha.2')
+  assert.equal(packageManifest.devDependencies['@deepseek-ai/dsh-client-ui-settings-models'], '0.2.1-alpha.3')
   assert.ok(!packageManifest.dsh.client.inject.includes('@deepseek-ai/dsh-client-runtime'))
 })
 
@@ -386,4 +386,20 @@ test('overlapping model refreshes settle together only after the latest snapshot
   await Promise.all([old, latest])
   assert.equal(settled, 2)
   assert.equal(controller.store.getSnapshot().status, 'ready')
+})
+
+test('alpha.3 shared provider editor preserves Claude controls and credential metadata', () => {
+  const render = clientFunction('renderProviderEditor', {
+    ProviderEditor: 'editor', react_jsx_runtime: { jsx: (type, props) => ({ type, props }) },
+  })
+  const credential = { configured: true, source: 'file', writable: true }
+  const nativeAuth = { env: ['TEST_API_KEY'], oauth: false }
+  const target = { provider: 'myclaude', displayName: 'Claude', settingsPath: ['providers', 'myclaude'], nativeAuth }
+  for (const thinkingPresets of [true, false]) {
+    const result = render({ target, row: { credential, credentialChecks: { TEST_API_KEY: credential } }, thinkingPresets })
+    assert.equal(result.props.thinkingPresets, thinkingPresets)
+    assert.equal(result.props.nativeAuth, nativeAuth)
+    assert.equal(result.props.credential, credential)
+    assert.equal(result.props.credentialChecks.TEST_API_KEY, credential)
+  }
 })
