@@ -16,12 +16,16 @@ import {
 
 const builtClient = readFileSync(new URL('../lib/client.js', import.meta.url), 'utf8')
 const packageManifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
+const helperSource = builtClient.slice(builtClient.indexOf('// BEGIN CLAUDE HELPERS'), builtClient.indexOf('// END CLAUDE HELPERS'))
+const helperNames = [...helperSource.matchAll(/function (\w+)\(/g)].map(match => match[1])
+const helperBindings = new Function(`${helperSource}; return { ${helperNames.join(', ')}, CLAUDE_KNOWN_MODELS };`)()
 
 function clientFunction(name, bindings = {}) {
   const start = builtClient.indexOf(`function ${name}(`)
   const end = builtClient.indexOf('\n\t\t}', start)
   assert.ok(start >= 0 && end > start)
-  return new Function(...Object.keys(bindings), `${builtClient.slice(start, end + 4)}; return ${name};`)(...Object.values(bindings))
+  const scope = { ...helperBindings, ...bindings }
+  return new Function(...Object.keys(scope), `${builtClient.slice(start, end + 4)}; return ${name};`)(...Object.values(scope))
 }
 
 test('known Claude input defaults preserve explicit choices and unknown models', () => {
@@ -29,7 +33,7 @@ test('known Claude input defaults preserve explicit choices and unknown models',
   for (const id of Object.keys(CLAUDE_KNOWN_MODELS)) {
     assert.deepEqual(defaults({ id }).input, ['text', 'image'])
     assert.deepEqual(defaults({ id, input: ['text'] }).input, ['text'])
-    assert.deepEqual(defaults({ id, input: [] }).input, ['text', 'image'])
+    assert.deepEqual(defaults({ id, input: [] }).input, [])
   }
   assert.deepEqual(defaults({ id: 'unknown' }), { id: 'unknown' })
   const native = clientFunction('withNativeClaudeModel', {
@@ -37,20 +41,19 @@ test('known Claude input defaults preserve explicit choices and unknown models',
     withDefaultClaudeReasoning: model => model,
   })
   const model = { id: 'claude-opus-5', reasoningEfforts: { low: 'low', medium: 'medium', high: 'high', max: 'max' }, compat: { custom: true } }
-  assert.deepEqual(native(model).input, ['text', 'image'])
+  assert.equal(native(model).input, undefined)
   assert.deepEqual(native(model).compat, { custom: true, forceAdaptiveThinking: true })
   assert.deepEqual(native({ ...model, input: ['text'] }).input, ['text'])
 })
 
-test('shared model row keeps input controls and scopes thinking presets to Claude', () => {
+test('shared model row keeps native reasoning controls and scopes adaptive controls to Claude', () => {
   const jsx = (type, props) => ({ type, props })
   const row = clientFunction('ModelRow', {
     react_jsx_runtime: { jsx, jsxs: jsx },
     ModelsSection_module_css_default: {},
     _deepseek_ai_dsh_client_ui_primitives: {},
     ModelInputTypes: 'input-types',
-    thinkingPresetOf: () => 'five',
-    reasoningEffortsForPreset: preset => ({ selected: preset }),
+    ModelReasoningEfforts: 'reasoning-editor',
   })
   const collect = (tree, type) => {
     if (!tree || typeof tree !== 'object') return []
@@ -63,11 +66,14 @@ test('shared model row keeps input controls and scopes thinking presets to Claud
     inputField: 'input', inputFallback: ['text', 'image'], contextWindow: {}, maxTokens: {},
     onChange: next => { changed = next } }
   assert.equal(collect(row(props), 'select').length, 0)
-  const tree = row({ ...props, thinkingPresets: true })
+  const tree = row({ ...props, thinkingPresets: true, reasoningLevels: ['off', 'high'], adaptiveFallback: true })
   assert.equal(collect(tree, 'input-types').length, 1)
-  const selector = collect(tree, 'select')[0]
-  selector.props.onChange({ target: { value: 'four' } })
-  assert.deepEqual(changed, { ...model, reasoningEfforts: { selected: 'four' } })
+  assert.equal(collect(tree, 'select').length, 0)
+  const editor = collect(tree, 'reasoning-editor')[0]
+  assert.equal(editor.props.claude, true)
+  assert.equal(editor.props.adaptiveFallback, true)
+  editor.props.onChange({ ...model, reasoningEfforts: { high: 'custom-high' } })
+  assert.deepEqual(changed.reasoningEfforts, { high: 'custom-high' })
 })
 
 test('RC2 URL validation accepts HTTP endpoints and rejects invalid protocols', () => {
@@ -90,10 +96,10 @@ test('RC2 provider diagnostics survive the directory join even for inactive prov
   assert.match(builtClient, /role: "alert",[\s\S]*?children: row\.entry\.error/)
 })
 
-test('builds the forked section against DSH 0.2.1-alpha.3', () => {
+test('builds the forked section against DSH 0.2.1-rc.1', () => {
   assert.equal(packageManifest.exports['./client'], './lib/client.js')
   assert.equal(packageManifest.scripts.build, 'node scripts/build-client.mjs')
-  assert.equal(packageManifest.devDependencies['@deepseek-ai/dsh-client-ui-settings-models'], '0.2.1-alpha.3')
+  assert.equal(packageManifest.devDependencies['@deepseek-ai/dsh-client-ui-settings-models'], '0.2.1-rc.1')
   assert.ok(!packageManifest.dsh.client.inject.includes('@deepseek-ai/dsh-client-runtime'))
 })
 
@@ -121,9 +127,77 @@ test('built client patches the alpha operations world, not the removed rc APIs',
 })
 
 test('built client writes native adaptive-thinking settings', () => {
-  assert.match(builtClient, /if \(adaptive\) compat\.forceAdaptiveThinking = true/)
+  assert.match(builtClient, /forceAdaptiveThinking: enabled/)
   assert.match(builtClient, /withNativeClaudeProfile\(credentialDraft\)/)
   assert.match(builtClient, /reasoningEfforts: reasoningEffortsForPreset/)
+})
+
+test('saving a single custom level preserves its wire value and independent adaptive state', () => {
+  const { withNativeClaudeModel, withClaudeAdaptive } = helperBindings
+  const model = { id: 'claude-opus-5', input: [], reasoningEfforts: { high: 'max' }, compat: { other: 7, forceAdaptiveThinking: true } }
+  assert.deepEqual(withNativeClaudeModel(model), model)
+  const disabled = withClaudeAdaptive(model, false)
+  assert.deepEqual(withNativeClaudeModel(disabled), { ...model, compat: { other: 7, forceAdaptiveThinking: false } })
+  assert.equal(model.compat.forceAdaptiveThinking, true)
+})
+
+test('turning native reasoning configuration off stays off across save and drops an invalid profile default', () => {
+  const withoutEfforts = clientFunction('withEfforts')({ id: 'claude-opus-5', reasoningEfforts: { high: 'high' }, compat: { forceAdaptiveThinking: true } }, undefined)
+  const saved = helperBindings.withNativeClaudeProfile({ api: 'anthropic-messages', reasoning: 'high', models: [withoutEfforts] })
+  assert.equal(Object.hasOwn(saved.models[0], 'reasoningEfforts'), false)
+  assert.equal(Object.hasOwn(saved, 'reasoning'), false)
+  assert.equal(saved.models[0].compat.forceAdaptiveThinking, true)
+  assert.deepEqual(helperBindings.withNativeClaudeProfile(saved), saved)
+})
+
+test('Claude 4.5 aliases initialize capacities, vision and off/high without adaptive thinking', () => {
+  for (const id of ['claude-haiku-4-5', 'claude-haiku-4-5-20251001',
+    'claude-opus-4-5', 'claude-opus-4-5-20251101',
+    'claude-sonnet-4-5', 'claude-sonnet-4-5-20250929']) {
+    const model = helperBindings.withFetchedClaudeMetadata({ id })
+    assert.deepEqual(helperBindings.CLAUDE_KNOWN_MODELS[id], CLAUDE_KNOWN_MODELS[id])
+    assert.equal(model.contextWindow, 200000)
+    assert.equal(model.maxTokens, 64000)
+    assert.deepEqual(model.input, ['text', 'image'])
+    assert.deepEqual(withKnownModelMetadata({ id }), { id, contextWindow: 200000, maxTokens: 64000 })
+    assert.deepEqual(model.reasoningEfforts, { off: null, high: 'high' })
+    assert.equal(model.compat.forceAdaptiveThinking, false)
+    assert.equal(helperBindings.withNativeClaudeModel({ ...model, compat: { forceAdaptiveThinking: true } }).compat.forceAdaptiveThinking, false)
+  }
+})
+
+test('new model identity applies defaults once without replacing later custom edits', () => {
+  const { newClaudeModel, carryClaudeDraft, finishClaudeDraft, withNativeClaudeModel } = helperBindings
+  const blank = newClaudeModel()
+  const typed = carryClaudeDraft(blank, { ...blank, id: 'claude-haiku-4-5', maxTokens: 12000, input: ['text'] })
+  const initialized = finishClaudeDraft(typed)
+  assert.deepEqual(initialized.reasoningEfforts, { off: null, high: 'high' })
+  assert.equal(initialized.maxTokens, 12000)
+  assert.deepEqual(initialized.input, ['text'])
+  const custom = { ...initialized, reasoningEfforts: { high: 'custom' } }
+  assert.equal(finishClaudeDraft(custom), custom)
+  assert.deepEqual(withNativeClaudeModel(custom).reasoningEfforts, { high: 'custom' })
+  const unknown = carryClaudeDraft(newClaudeModel(), { id: 'proxy-claude-model' })
+  assert.equal(finishClaudeDraft(unknown).compat.forceAdaptiveThinking, true)
+})
+
+test('profile adaptive fallback migrates without overwriting explicit per-model choices', () => {
+  const profile = { api: 'anthropic-messages', reasoning: 'high', compat: { forceAdaptiveThinking: true, retained: true }, models: [
+    { id: 'proxy-a', reasoningEfforts: { high: 'custom' } },
+    { id: 'proxy-b', reasoningEfforts: { high: 'high' }, compat: { forceAdaptiveThinking: false } }
+  ] }
+  const saved = helperBindings.withNativeClaudeProfile(profile)
+  assert.equal(saved.models[0].compat.forceAdaptiveThinking, true)
+  assert.equal(saved.models[1].compat.forceAdaptiveThinking, false)
+  assert.deepEqual(saved.compat, { retained: true })
+  assert.equal(saved.reasoning, 'high')
+  assert.equal(profile.models[0].compat, undefined)
+})
+
+test('official off placeholder is unchanged and retired preset notices are absent', () => {
+  assert.match(builtClient, /placeholder: level === "off" \? t\("modelReasoningOffValuePlaceholder"\) : level/)
+  assert.match(builtClient, /modelReasoningOffValuePlaceholder: "关闭思考"/)
+  assert.doesNotMatch(builtClient, /thinkingPresetToggle|adaptiveClaudeEnabled|已按模型自动填入|已自动关闭/)
 })
 
 test('builds the Anthropic models endpoint from the Messages base URL', () => {

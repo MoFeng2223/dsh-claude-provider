@@ -4,7 +4,7 @@ English | [简体中文](./README.zh-CN.md)
 
 DSH Claude Provider adds a dedicated Claude configuration interface to DeepSeek Harness. You can add multiple Claude providers, choose reasoning levels for each model, and automatically fetch model lists and fill in capacity settings and reasoning presets for common Claude models, without editing configuration files manually.
 
-Compared with the official generic custom provider form, the plugin adds a dedicated Claude entry, five-level, four-level, and on/off reasoning presets, and automatic defaults for known Claude models. DeepSeek Harness handles the saved reasoning configuration natively.
+Compared with the official generic custom provider form, the plugin adds a dedicated Claude entry, a per-model adaptive thinking toggle, and automatic defaults for known Claude models. DeepSeek Harness handles the saved reasoning configuration natively.
 
 ## What this plugin does
 
@@ -16,15 +16,11 @@ Compared with the official generic custom provider form, the plugin adds a dedic
   <img src="./docs/images/claude-provider-tabs.en.png" alt="Claude provider tab and configuration form" width="580">
 </p>
 
-2. **Adds model-specific reasoning modes**
+2. **Adds a per-model adaptive thinking toggle**
 
-   Each model can use one of three configurable mode sets:
+   Adds an Adaptive thinking toggle for each model alongside DSH's existing reasoning-level settings. Reasoning levels and their corresponding API parameter values remain customizable.
 
-   - Five levels: Low, Medium, High, XHigh, and Max
-   - Four levels: Low, Medium, High, and Max
-   - Toggle: On or Off
-
-   New models default to five levels, and Claude providers default to High.
+   For Anthropic-compatible models that support adaptive thinking. When enabled, the model adjusts its thinking based on task complexity and your selected reasoning level. When disabled, it uses the thinking token limit associated with that level.
 
    On save, the plugin writes each model's reasoning levels and adaptive thinking settings to DeepSeek Harness's native configuration.
 

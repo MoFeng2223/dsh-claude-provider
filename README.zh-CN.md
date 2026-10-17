@@ -4,7 +4,7 @@
 
 DSH Claude Provider 为 DeepSeek Harness 提供专用的 Claude 配置界面。你可以添加多个 Claude 提供方，为每个模型选择推理档位，并自动获取模型列表、填写常用 Claude 模型的容量和推理预设，无需手动编辑配置文件。
 
-相比官方的通用自定义提供方配置，插件增加了独立的 Claude 入口、五档／四档／开关式推理预设，以及按已知 Claude 模型自动填写参数的功能。保存后的推理配置由 DeepSeek Harness 原生处理。
+相比官方的通用自定义提供方配置，插件增加了独立的 Claude 入口、按模型设置的自适应思考开关，以及按已知 Claude 模型自动填写参数的功能。保存后的推理配置由 DeepSeek Harness 原生处理。
 
 ## 插件功能
 
@@ -16,15 +16,11 @@ DSH Claude Provider 为 DeepSeek Harness 提供专用的 Claude 配置界面。�
   <img src="./docs/images/claude-provider-tabs.png" alt="Claude 提供方选项与配置表单" width="580">
 </p>
 
-2. **增加按模型设置的推理模式**
+2. **增加按模型设置的自适应思考开关**
 
-   每个模型可以单独选择以下三种档位配置之一：
+   在 DSH 原有的推理等级设置中，为每个模型增加“自适应思考”开关。推理档位及对应的 API 参数值仍可自定义。
 
-   - 五档：Low、Medium、High、XHigh、Max
-   - 四档：Low、Medium、High、Max
-   - 开关：On、Off
-
-   新增模型默认使用五档，Claude 提供方默认选择 High。
+   适用于支持自适应思考的 Anthropic 兼容模型。开启后，模型根据任务难度和你选择的推理等级自动调整思考量；关闭后，改用该等级对应的思考 token 数量上限。
 
    插件会在保存时将模型的推理档位和自适应思考设置写入 DeepSeek Harness 原生配置。
 

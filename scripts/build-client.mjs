@@ -33,17 +33,17 @@ function replaceExactly(label, before, after, expected) {
 
 source = source.replaceAll('@deepseek-ai/dsh-client-ui-settings-models', '@mofeng2223/dsh-claude-provider')
 
+const helpers = await readFile(new URL('./client-claude.js', import.meta.url), 'utf8')
+replaceOnce('Claude model helpers', '\t\t/** Stable visible and accessible identity for one provider target. */',
+  '\t\t// BEGIN CLAUDE HELPERS\n' + helpers.split('\n').map(line => line.length ? '\t\t' + line : '').join('\n') + '\n\t\t// END CLAUDE HELPERS\n\t\t/** Stable visible and accessible identity for one provider target. */')
+
+
 replaceOnce(
   'RC8 credential update compatibility',
   '\t\t\t\t\tctx.remote.$on("credentials/reference-updated", refreshModels),',
   '\t\t\t\t\tctx.remote.$on("credentials/reference-updated", refreshModels),\n\t\t\t\t\tctx.remote.$on("credentials/updated", refreshModels),',
 )
 
-replaceOnce(
-  'Claude model helpers',
-  '\t\t/** Stable visible and accessible identity for one provider target. */',
-  `\t\tconst CLAUDE_DISCOVERY_API = "mofeng-anthropic-models";\n\t\tconst CLAUDE_FIVE_EFFORTS = Object.freeze({ low: "low", medium: "medium", high: "high", xhigh: "xhigh", max: "max" });\n\t\tconst CLAUDE_FOUR_EFFORTS = Object.freeze({ low: "low", medium: "medium", high: "high", max: "max" });\n\t\tconst CLAUDE_TOGGLE_EFFORTS = Object.freeze({ off: null, high: "high" });\n\t\tfunction reasoningEffortsForPreset(preset) {\n\t\t\tif (preset === "toggle") return { ...CLAUDE_TOGGLE_EFFORTS };\n\t\t\tif (preset === "four") return { ...CLAUDE_FOUR_EFFORTS };\n\t\t\treturn { ...CLAUDE_FIVE_EFFORTS };\n\t\t}\n\t\tfunction thinkingPresetOf(model) {\n\t\t\tconst efforts = model?.reasoningEfforts;\n\t\t\tif (efforts !== null && typeof efforts === "object" && !Array.isArray(efforts)) {\n\t\t\t\tif (Object.hasOwn(efforts, "off") && !Object.hasOwn(efforts, "low")) return "toggle";\n\t\t\t\tif (Object.hasOwn(efforts, "max") && !Object.hasOwn(efforts, "xhigh")) return "four";\n\t\t\t}\n\t\t\treturn "five";\n\t\t}\n\t\tfunction withDefaultClaudeReasoning(model) {\n\t\t\tconst efforts = model?.reasoningEfforts;\n\t\t\treturn efforts !== null && typeof efforts === "object" && !Array.isArray(efforts) && Object.keys(efforts).length > 0\n\t\t\t\t? { ...model }\n\t\t\t\t: { ...model, reasoningEfforts: reasoningEffortsForPreset("five") };\n\t\t}\n\t\tfunction isClaudeProvider(row, state) {\n\t\t\tif (row.entry.settingsNs !== "llm-pi-ai") return false;\n\t\t\tconst namespace = state.namespaces.get("llm-pi-ai");\n\t\t\tif (namespace === void 0) return false;\n\t\t\tconst profile = (0, _deepseek_ai_dsh_client_schema_form.getPath)(namespace.value, row.entry.settingsPath);\n\t\t\treturn profile !== null && typeof profile === "object" && profile.api === "anthropic-messages" && Array.isArray(profile.models) && profile.models.length > 0;\n\t\t}\n\t\t/** Stable visible and accessible identity for one provider target. */`,
-)
 
 replaceOnce(
   'custom Claude uses native Anthropic discovery',
@@ -51,54 +51,7 @@ replaceOnce(
   '\t\t\t\t\t\t...probe.api === void 0 ? {} : { api: props.thinkingPresets ? CLAUDE_DISCOVERY_API : probe.api },',
 )
 
-replaceOnce(
-  'Claude provider type constants',
-  '\t\tconst CLAUDE_DISCOVERY_API = "mofeng-anthropic-models";',
-  '\t\tconst CLAUDE_DISCOVERY_API = "mofeng-anthropic-models";\n\t\tconst CLAUDE_PROVIDER_SETTINGS_NS = "dsh-claude-provider";\n\t\tconst CLAUDE_PROVIDER_TYPE = "claude-adaptive";',
-)
 
-replaceOnce(
-  'native RC8 Claude profile helper',
-  '\t\tfunction isClaudeProvider(row, state) {',
-  `\t\tfunction withNativeClaudeModel(model) {
-\t\t\tconst next = withKnownClaudeInput(withDefaultClaudeReasoning(model));
-\t\t\tconst efforts = next.reasoningEfforts;
-\t\t\tconst adaptive = efforts !== null && typeof efforts === "object" && !Array.isArray(efforts)
-\t\t\t\t&& ["low", "medium", "high", "max"].every((level) => typeof efforts[level] === "string" && efforts[level].length > 0);
-\t\t\tconst compat = { ...(next.compat ?? {}) };
-\t\t\tif (adaptive) compat.forceAdaptiveThinking = true;
-\t\t\telse Reflect.deleteProperty(compat, "forceAdaptiveThinking");
-\t\t\tconst { compat: _compat, ...rest } = next;
-\t\t\treturn { ...rest, ...Object.keys(compat).length === 0 ? {} : { compat } };
-\t\t}
-\t\tfunction withNativeClaudeProfile(profile) {
-\t\t\tconst { compat: currentCompat, ...rest } = profile ?? {};
-\t\t\tconst compat = { ...(currentCompat ?? {}) };
-\t\t\tReflect.deleteProperty(compat, "forceAdaptiveThinking");
-\t\t\tconst models = Array.isArray(profile?.models) ? profile.models.map(withNativeClaudeModel) : profile?.models;
-\t\t\treturn {
-\t\t\t\t...rest,
-\t\t\t\tapi: "anthropic-messages",
-\t\t\t\t...Object.keys(compat).length === 0 ? {} : { compat },
-\t\t\t\t...models === void 0 ? {} : { models },
-\t\t\t\treasoning: "high"
-\t\t\t};
-\t\t}
-\t\tfunction isClaudeProvider(row, state) {`,
-)
-
-
-replaceOnce(
-  'persisted Claude provider type lookup',
-  '\t\tfunction isClaudeProvider(row, state) {\n\t\t\tif (row.entry.settingsNs !== "llm-pi-ai") return false;\n\t\t\tconst namespace = state.namespaces.get("llm-pi-ai");\n\t\t\tif (namespace === void 0) return false;\n\t\t\tconst profile = (0, _deepseek_ai_dsh_client_schema_form.getPath)(namespace.value, row.entry.settingsPath);\n\t\t\treturn profile !== null && typeof profile === "object" && profile.api === "anthropic-messages" && Array.isArray(profile.models) && profile.models.length > 0;\n\t\t}',
-  '\t\tfunction isClaudeProvider(row, state) {\n\t\t\tconst namespace = state.namespaces.get(CLAUDE_PROVIDER_SETTINGS_NS);\n\t\t\treturn namespace?.value?.providerTypes?.[row.entry.provider] === CLAUDE_PROVIDER_TYPE;\n\t\t}',
-)
-
-replaceOnce(
-  'React DOM portal dependency',
-  '\t\tlet react = require("react");',
-  '\t\tlet react = require("react");\n\t\tlet react_dom = require("react-dom");',
-)
 
 replaceOnce(
   'recorded Claude model metadata',
@@ -109,83 +62,20 @@ replaceOnce(
 \t\t\t"claude-haiku-5-5": Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: "five" }),
 \t\t\t"claude-haiku-4-5-20251001": Object.freeze({ contextWindow: 200000, maxTokens: 64000, preset: "toggle" }),
 \t\t\t"claude-haiku-4-5": Object.freeze({ contextWindow: 200000, maxTokens: 64000, preset: "toggle" }),
+\t\t\t"claude-opus-4-5-20251101": Object.freeze({ contextWindow: 200000, maxTokens: 64000, preset: "toggle" }),
+\t\t\t"claude-opus-4-5": Object.freeze({ contextWindow: 200000, maxTokens: 64000, preset: "toggle" }),
 \t\t\t"claude-opus-4-6": Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: "four" }),
 \t\t\t"claude-opus-4-7": Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: "five" }),
 \t\t\t"claude-opus-4-8": Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: "five" }),
 \t\t\t"claude-opus-5": Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: "five" }),
 \t\t\t"claude-opus-5-5": Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: "five" }),
+\t\t\t"claude-sonnet-4-5-20250929": Object.freeze({ contextWindow: 200000, maxTokens: 64000, preset: "toggle" }),
+\t\t\t"claude-sonnet-4-5": Object.freeze({ contextWindow: 200000, maxTokens: 64000, preset: "toggle" }),
 \t\t\t"claude-sonnet-4-6": Object.freeze({ contextWindow: 1000000, maxTokens: 64000, preset: "four" }),
 \t\t\t"claude-sonnet-5-5": Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: "five" }),
 \t\t\t"claude-sonnet-5": Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: "five" })
 \t\t});`,
 )
-
-replaceOnce(
-  'fetched Claude metadata helper',
-  '\t\tfunction thinkingPresetOf(model) {',
-  `\t\tfunction withKnownClaudeInput(model) {\n\t\t\tif (!CLAUDE_KNOWN_MODELS[model?.id] || (Array.isArray(model.input) && model.input.length > 0)) return { ...model };\n\t\t\treturn { ...model, input: ["text", "image"] };\n\t\t}\n\t\tfunction withFetchedClaudeMetadata(model) {
-\t\t\tconst known = CLAUDE_KNOWN_MODELS[model?.id];
-\t\t\tif (known === undefined) return withDefaultClaudeReasoning(model);
-\t\t\treturn { ...withKnownClaudeInput(model), contextWindow: known.contextWindow, maxTokens: known.maxTokens, reasoningEfforts: reasoningEffortsForPreset(known.preset) };
-\t\t}
-\t\tfunction thinkingPresetOf(model) {`,
-)
-
-replaceOnce(
-  'portal Claude thinking help component',
-  '\t\tfunction isClaudeProvider(row, state) {',
-  `\t\tfunction ClaudeThinkingHelp(props) {
-\t\t\tconst anchorRef = (0, react.useRef)(null);
-\t\t\tconst tooltipRef = (0, react.useRef)(null);
-\t\t\tconst [open, setOpen] = (0, react.useState)(false);
-\t\t\tconst [position, setPosition] = (0, react.useState)({ left: 12, top: 12, width: 680 });
-\t\t\t(0, react.useLayoutEffect)(() => {
-\t\t\t\tif (!open) return;
-\t\t\t\tconst place = () => {
-\t\t\t\t\tconst anchor = anchorRef.current;
-\t\t\t\t\tif (anchor === null) return;
-\t\t\t\t\tconst rect = anchor.getBoundingClientRect();
-\t\t\t\t\tconst width = Math.max(280, Math.min(680, window.innerWidth - 24));
-\t\t\t\t\tconst height = tooltipRef.current?.offsetHeight ?? 120;
-\t\t\t\t\tconst left = Math.max(12, Math.min(rect.left, window.innerWidth - width - 12));
-\t\t\t\t\tconst below = rect.bottom + 8;
-\t\t\t\t\tconst top = below + height <= window.innerHeight - 12 ? below : Math.max(12, rect.top - height - 8);
-\t\t\t\t\tsetPosition({ left, top, width });
-\t\t\t\t};
-\t\t\t\tplace();
-\t\t\t\twindow.addEventListener("resize", place);
-\t\t\t\twindow.addEventListener("scroll", place, true);
-\t\t\t\treturn () => {
-\t\t\t\t\twindow.removeEventListener("resize", place);
-\t\t\t\t\twindow.removeEventListener("scroll", place, true);
-\t\t\t\t};
-\t\t\t}, [open]);
-\t\t\tconst tooltip = open && typeof document !== "undefined" ? (0, react_dom.createPortal)((0, react_jsx_runtime.jsx)("span", {
-\t\t\t\tref: tooltipRef,
-\t\t\t\tclassName: "mofeng-thinking-tooltip",
-\t\t\t\trole: "tooltip",
-\t\t\t\tstyle: position,
-\t\t\t\tchildren: props.t("adaptiveClaudeHelp").split("\\n").map((line, index) => (0, react_jsx_runtime.jsx)("span", { children: line }, index))
-\t\t\t}), document.body) : null;
-\t\t\treturn (0, react_jsx_runtime.jsxs)(react.Fragment, {
-\t\t\t\tchildren: [(0, react_jsx_runtime.jsxs)("span", {
-\t\t\t\t\tref: anchorRef,
-\t\t\t\t\tclassName: "mofeng-thinking-help",
-\t\t\t\t\t"aria-label": props.t("adaptiveClaudeHelpLabel"),
-\t\t\t\t\ttabIndex: 0,
-\t\t\t\t\tonMouseEnter: () => setOpen(true),
-\t\t\t\t\tonMouseLeave: () => setOpen(false),
-\t\t\t\t\tonFocus: () => setOpen(true),
-\t\t\t\t\tonBlur: () => setOpen(false),
-\t\t\t\t\tchildren: ["!", tooltip]
-\t\t\t\t}), (0, react_jsx_runtime.jsx)("style", {
-\t\t\t\t\tchildren: ".mofeng-thinking-help{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:1px solid currentColor;border-radius:50%;font-size:11px;font-weight:700;line-height:1;cursor:help;vertical-align:middle}.mofeng-thinking-tooltip{position:fixed;z-index:2147483647;display:flex;flex-direction:column;gap:5px;box-sizing:border-box;padding:9px 12px;border:1px solid rgba(255,255,255,.18);border-radius:7px;background:#25282d;color:#f5f6f7;font-size:13px;font-weight:400;line-height:1.45;text-align:left;box-shadow:0 6px 20px rgba(0,0,0,.26);pointer-events:none}.mofeng-thinking-tooltip>span{display:block;white-space:normal;overflow-wrap:anywhere}"
-\t\t\t\t})]
-\t\t\t});
-\t\t}
-\t\tfunction isClaudeProvider(row, state) {`,
-)
-
 
 replaceOnce(
   'provider type state',
@@ -216,18 +106,6 @@ replaceOnce(
   'remove persisted Claude provider type',
   '\t\t\t}], void 0);\n\t\t\tif (written.kind !== "written") return written.message;\n\t\t\tawait controller.load();',
   '\t\t\t}], void 0);\n\t\t\tif (written.kind !== "written") return written.message;\n\t\t\tconst typedRemoval = await operations.writeSettings(CLAUDE_PROVIDER_SETTINGS_NS, [{\n\t\t\t\top: "unset",\n\t\t\t\tpath: ["providerTypes", target.provider]\n\t\t\t}], void 0);\n\t\t\tif (typedRemoval.kind !== "written") return typedRemoval.message;\n\t\t\tawait controller.load();',
-)
-
-replaceOnce(
-  'Claude provider intro',
-  `\t\t\t\t\t(0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\t\t\tclassName: ModelsSection_module_css_default["field"],\n\t\t\t\t\t\tchildren: [(0, react_jsx_runtime.jsx)("span", {\n\t\t\t\t\t\t\tclassName: ModelsSection_module_css_default["fieldLabel"],\n\t\t\t\t\t\t\tchildren: t("customRoute")`,
-  `\t\t\t\t\tisAdaptiveClaude ? (0, react_jsx_runtime.jsx)("p", {\n\t\t\t\t\t\tclassName: ModelsSection_module_css_default["savedNotice"],\n\t\t\t\t\t\trole: "status",\n\t\t\t\t\t\tchildren: t("adaptiveClaudeEnabled")\n\t\t\t\t\t}) : null,\n\t\t\t\t\t(0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\t\t\tclassName: ModelsSection_module_css_default["field"],\n\t\t\t\t\t\tchildren: [(0, react_jsx_runtime.jsx)("span", {\n\t\t\t\t\t\t\tclassName: ModelsSection_module_css_default["fieldLabel"],\n\t\t\t\t\t\t\tchildren: t("customRoute")`,
-)
-
-replaceOnce(
-  'Claude thinking help tooltip',
-  '\t\t\t\t\tisAdaptiveClaude ? (0, react_jsx_runtime.jsx)("p", {\n\t\t\t\t\t\tclassName: ModelsSection_module_css_default["savedNotice"],\n\t\t\t\t\t\trole: "status",\n\t\t\t\t\t\tchildren: t("adaptiveClaudeEnabled")\n\t\t\t\t\t}) : null,',
-  '\t\t\t\t\tisAdaptiveClaude ? (0, react_jsx_runtime.jsxs)("p", {\n\t\t\t\t\t\tclassName: ModelsSection_module_css_default["savedNotice"],\n\t\t\t\t\t\trole: "status",\n\t\t\t\t\t\tchildren: [t("adaptiveClaudeEnabled"), " ", (0, react_jsx_runtime.jsx)(ClaudeThinkingHelp, { t })]\n\t\t\t\t\t}) : null,',
 )
 
 replaceOnce(
@@ -269,18 +147,8 @@ replaceOnce(
   '\t\t\t\t\tbyId.set(candidate.id, byId.get(candidate.id) ?? (props.thinkingPresets ? withFetchedClaudeMetadata(adopt(candidate)) : adopt(candidate)));',
 )
 
-replaceOnce(
-  'manually added Claude models default to five efforts',
-  '\t\t\t\t\t\tonChange([...models, { id: "" }]);',
-  '\t\t\t\t\t\tonChange([...models, props.thinkingPresets ? withDefaultClaudeReasoning({ id: "" }) : { id: "" }]);',
-)
 
 // Keep the upstream shared row and append Claude-only controls to its expanded fields.
-replaceOnce(
-  'shared model row Claude controls',
-  '\t\t\t\t\t\tonChange: props.onChange\n\t\t\t\t\t})]',
-  '\t\t\t\t\t\tonChange: props.onChange\n\t\t\t\t\t}), props.thinkingPresets ? (0, react_jsx_runtime.jsxs)("label", {\n\t\t\t\t\t\tclassName: ModelsSection_module_css_default["modelField"],\n\t\t\t\t\t\tchildren: [t("thinkingPreset"), (0, react_jsx_runtime.jsxs)("select", {\n\t\t\t\t\t\t\tclassName: ModelsSection_module_css_default["input"] + " " + ModelsSection_module_css_default["selectInput"],\n\t\t\t\t\t\t\tvalue: thinkingPresetOf(model),\n\t\t\t\t\t\t\t"aria-label": t("thinkingPreset") + " " + position,\n\t\t\t\t\t\t\tdisabled,\n\t\t\t\t\t\t\tonChange: (event) => props.onChange({ ...model, reasoningEfforts: reasoningEffortsForPreset(event.target.value) }),\n\t\t\t\t\t\t\tchildren: ["toggle", "four", "five"].map((preset) => (0, react_jsx_runtime.jsx)("option", { value: preset, children: t({ toggle: "thinkingPresetToggle", four: "thinkingPresetFour", five: "thinkingPresetFive" }[preset]) }, preset))\n\t\t\t\t\t\t})]\n\t\t\t\t\t}) : null]',
-)
 
 replaceOnce(
   'Claude model row defaults and presets',
@@ -296,31 +164,44 @@ replaceOnce(
 
 replaceOnce(
   'existing Anthropic card enables thinking presets',
-  '\t\t\t\t\t\t\t\t...catalogProps,\n\t\t\t\t\t\t\t\tcatalogProvider: props.declared === true ? void 0 : props.provider,\n\t\t\t\t\t\t\t\tdefaultInput: Array.isArray(defaultInput) ? defaultInput : void 0,\n\t\t\t\t\t\t\t\tprobe,\n\t\t\t\t\t\t\t\tprobeBlocked: keyFailure,\n\t\t\t\t\t\t\t\toperations',
-  '\t\t\t\t\t\t\t\t...catalogProps,\n\t\t\t\t\t\t\t\tcatalogProvider: props.declared === true ? void 0 : props.provider,\n\t\t\t\t\t\t\t\tdefaultInput: Array.isArray(defaultInput) ? defaultInput : void 0,\n\t\t\t\t\t\t\t\tprobe,\n\t\t\t\t\t\t\t\tprobeBlocked: keyFailure,\n\t\t\t\t\t\t\t\tthinkingPresets: props.thinkingPresets === true,\n\t\t\t\t\t\t\t\toperations',
+  '\t\t\t\t\t\t\t\t...catalogProps,\n\t\t\t\t\t\t\t\tcatalogProvider: props.declared === true ? void 0 : props.provider,\n\t\t\t\t\t\t\t\treasoningLevels,\n\t\t\t\t\t\t\t\tdefaultInput: Array.isArray(defaultInput) ? defaultInput : void 0,\n\t\t\t\t\t\t\t\tprobe,\n\t\t\t\t\t\t\t\tprobeBlocked: keyFailure,\n\t\t\t\t\t\t\t\toperations',
+  '\t\t\t\t\t\t\t\t...catalogProps,\n\t\t\t\t\t\t\t\tcatalogProvider: props.declared === true ? void 0 : props.provider,\n\t\t\t\t\t\t\t\treasoningLevels,\n\t\t\t\t\t\t\t\tdefaultInput: Array.isArray(defaultInput) ? defaultInput : void 0,\n\t\t\t\t\t\t\t\tprobe,\n\t\t\t\t\t\t\t\tprobeBlocked: keyFailure,\n\t\t\t\t\t\t\t\tthinkingPresets: props.thinkingPresets === true,\n\t\t\t\t\t\t\t\toperations',
 )
 
-
-
-
-
-
-
-
-replaceOnce(
-  'English Claude copy',
-  '\t\t\tcustomTag: "Custom",',
-  '\t\t\tcustomTag: "Custom",\n\t\t\tclaudeCustomAdd: "Add Claude provider",\n\t\t\tclaudeCustomTitle: "Claude provider",\n\t\t\tclaudeTypeUnavailable: "Claude provider type storage is unavailable.",\n\t\t\tclaudeTypeTag: "Claude provider",\n\t\t\tclaudeTypeIntro: "This provider type saves native RC8 adaptive-thinking compatibility, model reasoning mappings, Claude model discovery, and recorded capacities.",\n\t\t\tadaptiveClaudeEnabled: "Choose a thinking mode for each model; new models default to five levels.",\n\t\t\tadaptiveClaudeHelpLabel: "Thinking mode help",\n\t\t\tadaptiveClaudeHelp: "Five (low / medium / high / xhigh / max): Haiku 5.5, Fable 5.1, Fable 5, Opus 5, Opus 4.8, Opus 4.7, Sonnet 5\\nFour (low / medium / high / max): Opus 4.6, Sonnet 4.6\\nOn / Off: Haiku 4.5",\n\t\t\tadaptiveClaudeTag: "Claude configured",\n\t\t\tthinkingPreset: "Thinking mode",\n\t\t\tthinkingPresetToggle: "On / Off",\n\t\t\tthinkingPresetFour: "Four levels",\n\t\t\tthinkingPresetFive: "Five levels (default)",',
-)
-
-replaceOnce(
-  'Chinese Claude copy',
-  '\t\t\tcustomTag: "自定义",',
-  '\t\t\tcustomTag: "自定义",\n\t\t\tclaudeCustomAdd: "添加 Claude 提供方",\n\t\t\tclaudeCustomTitle: "Claude 提供方",\n\t\t\tclaudeTypeUnavailable: "Claude 提供方类型存储不可用。",\n\t\t\tclaudeTypeTag: "Claude 提供方",\n\t\t\tclaudeTypeIntro: "此提供方类型会写入 RC8 原生自适应思考兼容配置、模型思考映射、Claude 模型发现和已记录容量。",\n\t\t\tadaptiveClaudeEnabled: "每个模型可单独选择思考模式，新增模型默认使用五档。",\n\t\t\tadaptiveClaudeHelpLabel: "思考模式说明",\n\t\t\tadaptiveClaudeHelp: "五档（低 / 中 / 高 / 超高 / 最大）：Haiku 5.5、Fable 5.1、Fable 5、Opus 5、Opus 4.8、Opus 4.7、Sonnet 5\\n四档（低 / 中 / 高 / 最大）：Opus 4.6、Sonnet 4.6\\n开启 / 关闭：Haiku 4.5",\n\t\t\tadaptiveClaudeTag: "Claude 已适配",\n\t\t\tthinkingPreset: "思考模式",\n\t\t\tthinkingPresetToggle: "开启 / 关闭",\n\t\t\tthinkingPresetFour: "四档",\n\t\t\tthinkingPresetFive: "五档（默认）",',
-)
-
-
-
+replaceOnce('native reasoning editor Claude props',
+  'function ModelReasoningEfforts({ model, levels, position, disabled, t, onChange }) {',
+  'function ModelReasoningEfforts({ model, levels, position, disabled, t, onChange, claude, adaptiveFallback }) {')
+replaceOnce('native reasoning editor model defaults',
+  'const initialEntries = INITIAL_LEVELS.filter((level) => levels.includes(level)).map((level) => [level, defaultValue(level)]);',
+  'const initialEntries = claude ? Object.entries(reasoningEffortsForPreset(CLAUDE_KNOWN_MODELS[model.id]?.preset ?? "five")) : INITIAL_LEVELS.filter((level) => levels.includes(level)).map((level) => [level, defaultValue(level)]);')
+replaceOnce('independent adaptive thinking switch',
+  '\t\t\t\t}), entries === void 0 ? null : (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [',
+  '\t\t\t\t}), claude ? (0, react_jsx_runtime.jsx)(ClaudeAdaptiveThinking, { model, inherited: adaptiveFallback, position, disabled, t, onChange }) : null, entries === void 0 ? null : (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [')
+replaceOnce('Claude reasoning editor wiring',
+  '\t\t\t\t\t\t\tlevels: props.reasoningLevels,',
+  '\t\t\t\t\t\t\tlevels: props.reasoningLevels,\n\t\t\t\t\t\t\tclaude: props.thinkingPresets === true,\n\t\t\t\t\t\t\tadaptiveFallback: props.adaptiveFallback,')
+replaceOnce('Claude row inherited adaptive setting',
+  '\t\t\t\t\t\t\treasoningLevels: props.reasoningLevels,',
+  '\t\t\t\t\t\t\treasoningLevels: props.reasoningLevels,\n\t\t\t\t\t\t\tadaptiveFallback: props.adaptiveFallback,')
+replaceOnce('Claude profile inherited adaptive setting',
+  '\t\t\t\t\t\t\t\tthinkingPresets: props.thinkingPresets === true,',
+  '\t\t\t\t\t\t\t\tthinkingPresets: props.thinkingPresets === true,\n\t\t\t\t\t\t\t\tadaptiveFallback: schema.getPath(draft, ["compat", "forceAdaptiveThinking"]),')
+replaceOnce('new Claude row draft',
+  '\t\t\t\t\t\tonChange([...models, { id: "" }]);',
+  '\t\t\t\t\t\tonChange([...models, props.thinkingPresets ? newClaudeModel() : { id: "" }]);')
+replaceOnce('preserve new model draft while editing identity',
+  '\t\t\t\t\treturn Object.fromEntries(Object.entries({\n\t\t\t\t\t\t...model,\n\t\t\t\t\t\t...next\n\t\t\t\t\t}).filter(([key]) => !cleared.has(key)));',
+  '\t\t\t\t\treturn carryClaudeDraft(model, Object.fromEntries(Object.entries({\n\t\t\t\t\t\t...model,\n\t\t\t\t\t\t...next\n\t\t\t\t\t}).filter(([key]) => !cleared.has(key))));')
+replaceOnce('new Claude defaults after model identity is entered',
+  '\t\t\t\t\t\t\tonFieldChange: (field, value) => {\n\t\t\t\t\t\t\t\tpatch(index, { [field]: value });',
+  '\t\t\t\t\t\t\tonIdBlur: () => {\n\t\t\t\t\t\t\t\tif (!props.thinkingPresets) return;\n\t\t\t\t\t\t\t\tconst next = finishClaudeDraft(model);\n\t\t\t\t\t\t\t\tif (next !== model) onChange(models.map((row, at) => at === index ? next : row));\n\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\tonFieldChange: (field, value) => {\n\t\t\t\t\t\t\t\tpatch(index, { [field]: value });')
+replaceOnce('new Claude profile compatible default effort',
+  '\t\t\t\t\t\tvalue: profile\n\t\t\t\t\t}], openedAt);',
+  '\t\t\t\t\t\tvalue: isAdaptiveClaude ? withNativeClaudeProfile(profile) : profile\n\t\t\t\t\t}], openedAt);')
+replaceOnce('English Claude copy', '\t\t\tcustomTag: "Custom",',
+  '\t\t\tcustomTag: "Custom",\n\t\t\tclaudeCustomAdd: "Add Claude provider",\n\t\t\tclaudeCustomTitle: "Claude provider",\n\t\t\tclaudeTypeTag: "Claude provider",\n\t\t\tclaudeAdaptiveThinking: "Adaptive thinking",\n\t\t\tclaudeAdaptiveHelpLabel: "Adaptive thinking help",\n\t\t\tclaudeAdaptiveHelp: "For Anthropic-compatible models that support adaptive thinking. When enabled, the model adjusts its thinking based on task complexity and your selected reasoning level. When disabled, it uses the thinking token limit associated with that level.",')
+replaceOnce('Chinese Claude copy', '\t\t\tcustomTag: "自定义",',
+  '\t\t\tcustomTag: "自定义",\n\t\t\tclaudeCustomAdd: "添加 Claude 提供方",\n\t\t\tclaudeCustomTitle: "Claude 提供方",\n\t\t\tclaudeTypeTag: "Claude 提供方",\n\t\t\tclaudeAdaptiveThinking: "自适应思考",\n\t\t\tclaudeAdaptiveHelpLabel: "自适应思考说明",\n\t\t\tclaudeAdaptiveHelp: "适用于支持自适应思考的 Anthropic 兼容模型。开启后，模型根据任务难度和你选择的推理等级自动调整思考量；关闭后，改用该等级对应的思考 token 数量上限。",')
 
 replaceOnce('Claude tab busy state',
   'const [customBusy, setCustomBusy] = (0, react.useState)(false);',
