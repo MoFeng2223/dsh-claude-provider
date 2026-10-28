@@ -143,8 +143,8 @@ source = source.replaceAll('children: t("adaptiveClaudeTag")', 'children: t("cla
 
 replaceOnce(
   'fetched Claude models use recorded metadata',
-  '\t\t\t\t\tbyId.set(candidate.id, byId.get(candidate.id) ?? adopt(candidate));',
-  '\t\t\t\t\tbyId.set(candidate.id, byId.get(candidate.id) ?? (props.thinkingPresets ? withFetchedClaudeMetadata(adopt(candidate)) : adopt(candidate)));',
+  'const addedRows = activeCandidates.filter((candidate) => isPicked(candidate.id) && !keptIds.has(candidate.id)).map(adopt);',
+  'const addedRows = activeCandidates.filter((candidate) => isPicked(candidate.id) && !keptIds.has(candidate.id)).map((candidate) => props.thinkingPresets ? withFetchedClaudeMetadata(adopt(candidate)) : adopt(candidate));',
 )
 
 

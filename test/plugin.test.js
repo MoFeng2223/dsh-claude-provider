@@ -51,7 +51,7 @@ test('shared model row keeps native reasoning controls and scopes adaptive contr
   const row = clientFunction('ModelRow', {
     react_jsx_runtime: { jsx, jsxs: jsx },
     ModelsSection_module_css_default: {},
-    _deepseek_ai_dsh_client_ui_primitives: {},
+    _deepseek_ai_dsh_client_ui_primitives: { useRowDragPreview: () => ({}) },
     ModelInputTypes: 'input-types',
     ModelReasoningEfforts: 'reasoning-editor',
   })
@@ -62,7 +62,7 @@ test('shared model row keeps native reasoning controls and scopes adaptive contr
   }
   let changed
   const model = { id: 'claude-opus-5', input: ['text'], maxTokens: 123 }
-  const props = { model, position: 1, t: key => key, expanded: true, disabled: false,
+  const props = { model, order: {}, position: 1, t: key => key, expanded: true, disabled: false,
     inputField: 'input', inputFallback: ['text', 'image'], contextWindow: {}, maxTokens: {},
     onChange: next => { changed = next } }
   assert.equal(collect(row(props), 'select').length, 0)
@@ -96,26 +96,43 @@ test('RC2 provider diagnostics survive the directory join even for inactive prov
   assert.match(builtClient, /role: "alert",[\s\S]*?children: row\.entry\.error/)
 })
 
-test('builds the forked section against DSH 0.2.1-rc.4', () => {
+test('builds the forked section against DSH 0.2.2-alpha.2', () => {
   assert.equal(packageManifest.exports['./client'], './lib/client.js')
   assert.equal(packageManifest.scripts.build, 'node scripts/build-client.mjs')
-  assert.equal(packageManifest.devDependencies['@deepseek-ai/dsh-client-ui-settings-models'], '0.2.1-rc.4')
+  assert.equal(packageManifest.devDependencies['@deepseek-ai/dsh-client-ui-settings-models'], '0.2.2-alpha.2')
   assert.ok(!packageManifest.dsh.client.inject.includes('@deepseek-ai/dsh-client-runtime'))
 })
 
-test('model discovery selection clears hidden selections when deselecting filtered results', () => {
-  const start = builtClient.indexOf('const toggleVisibleCandidates =')
-  const end = builtClient.indexOf('const askable =', start)
-  assert.ok(start >= 0 && end > start)
-  const toggle = new Function('visibleCandidates', 'setPicked',
-    builtClient.slice(start, end) + '\nreturn toggleVisibleCandidates;')
-  let picked = new Set(['hidden-model'])
-  const click = toggle([{ id: 'visible-model' }], update => { picked = update(picked) })
-  click()
-  assert.deepEqual([...picked].sort(), ['hidden-model', 'visible-model'])
-  click()
-  assert.equal(picked.size, 0)
-})
+test('model selection removes unchecked listed rows while preserving custom settings and unlisted rows', () => {
+  const start = builtClient.indexOf('const configuredIds =');
+  const end = builtClient.indexOf('const toggle =', start);
+  const reconcile = new Function('models', 'candidates', 'flipped', 'adopt', 'props', 'withFetchedClaudeMetadata', 'textOf', 'onChange', 'rowState', 'closePicker',
+    builtClient.slice(start, end) + '; return { adoptPicked, emptiesList };');
+  const custom = { id: 'claude-opus-5', contextWindow: 456000, reasoningEfforts: { high: 'max' }, compat: { forceAdaptiveThinking: false } };
+  const unlisted = { id: 'private-model' };
+  let saved, removed;
+  const run = (models, candidates, flipped) => reconcile(models, candidates, new Set(flipped), x => ({ ...x }), { thinkingPresets: true }, helperBindings.withFetchedClaudeMetadata, (x, k) => x[k], x => { saved = x }, { forget: x => { removed = x } }, () => {});
+  const result = run([custom, { id: 'old-model' }, unlisted], [{ id: custom.id }, { id: 'old-model' }, { id: 'claude-haiku-4-5' }], ['old-model', 'claude-haiku-4-5']);
+  assert.equal(result.emptiesList, false);
+  result.adoptPicked();
+  assert.equal(saved[0], custom);
+  assert.equal(saved[1], unlisted);
+  assert.deepEqual([...removed], [1]);
+  assert.equal(saved[2].compat.forceAdaptiveThinking, false);
+  assert.deepEqual(saved[2].reasoningEfforts, { off: null, high: 'high' });
+  assert.equal(run([{ id: 'only' }], [{ id: 'only' }], ['only']).emptiesList, true);
+});
+
+test('filtered selection changes only visible candidates', () => {
+  const start = builtClient.indexOf('const toggleVisibleCandidates =');
+  const end = builtClient.indexOf('const askable =', start);
+  const toggle = new Function('visibleCandidates', 'allVisibleCandidatesPicked', 'pickedByDefault', 'setFlipped', builtClient.slice(start, end) + '; return toggleVisibleCandidates;');
+  let flipped = new Set(['hidden-model']);
+  toggle([{ id: 'visible-model' }], false, () => false, update => { flipped = update(flipped) })();
+  assert.deepEqual([...flipped].sort(), ['hidden-model', 'visible-model']);
+  toggle([{ id: 'visible-model' }], true, () => false, update => { flipped = update(flipped) })();
+  assert.deepEqual([...flipped], ['hidden-model']);
+});
 
 test('built client patches the alpha operations world, not the removed rc APIs', () => {
   assert.match(builtClient, /operations\.writeSettings\(CLAUDE_PROVIDER_SETTINGS_NS/)
