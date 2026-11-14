@@ -84,7 +84,7 @@ test('RC2 URL validation accepts HTTP endpoints and rejects invalid protocols', 
     assert.equal(valid(url), false)
   }
   assert.match(builtClient, /baseURL: normalizedBaseURL/)
-  assert.match(builtClient, /probeBlocked: baseUrlInvalid \? "customBaseUrlInvalid"/)
+  assert.match(builtClient, /probeBlocked:\s*baseUrlInvalid\s*\? "customBaseUrlInvalid"/)
 })
 
 test('RC2 provider diagnostics survive the directory join even for inactive providers', () => {
@@ -96,17 +96,17 @@ test('RC2 provider diagnostics survive the directory join even for inactive prov
   assert.match(builtClient, /role: "alert",[\s\S]*?children: row\.entry\.error/)
 })
 
-test('builds the forked section against DSH 0.2.2-rc.1', () => {
+test('builds the forked section against DSH 0.2.2-rc.3', () => {
   assert.equal(packageManifest.exports['./client'], './lib/client.js')
   assert.equal(packageManifest.scripts.build, 'node scripts/build-client.mjs')
-  assert.equal(packageManifest.devDependencies['@deepseek-ai/dsh-client-ui-settings-models'], '0.2.2-rc.1')
+  assert.equal(packageManifest.devDependencies['@deepseek-ai/dsh-client-ui-settings-models'], '0.2.2-rc.3')
   assert.ok(!packageManifest.dsh.client.inject.includes('@deepseek-ai/dsh-client-runtime'))
 })
 
 test('model selection removes unchecked listed rows while preserving custom settings and unlisted rows', () => {
   const start = builtClient.indexOf('const configuredIds =');
   const end = builtClient.indexOf('const toggle =', start);
-  const reconcile = new Function('models', 'candidates', 'flipped', 'adopt', 'props', 'withFetchedClaudeMetadata', 'textOf', 'onChange', 'rowState', 'closePicker',
+  const reconcile = new Function('models', 'candidates', 'flipped', 'adopt', 'props', 'withFetchedClaudeMetadata', 'textOf$1', 'onChange', 'rowState', 'closePicker',
     builtClient.slice(start, end) + '; return { adoptPicked, emptiesList };');
   const custom = { id: 'claude-opus-5', contextWindow: 456000, reasoningEfforts: { high: 'max' }, compat: { forceAdaptiveThinking: false } };
   const unlisted = { id: 'private-model' };
@@ -135,7 +135,7 @@ test('filtered selection changes only visible candidates', () => {
 });
 
 test('built client patches the alpha operations world, not the removed rc APIs', () => {
-  assert.match(builtClient, /operations\.writeSettings\(CLAUDE_PROVIDER_SETTINGS_NS/)
+  assert.match(builtClient, /operations\.writeSettings\(\s*CLAUDE_PROVIDER_SETTINGS_NS/)
   assert.match(builtClient, /thinkingPresets: isClaudeProvider\(row, state\)/)
   assert.match(builtClient, /claudeCustomAdd/)
   assert.doesNotMatch(builtClient, /api\.settings\.mutate/)

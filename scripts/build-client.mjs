@@ -1,3 +1,5 @@
+import { parse, tokenizer } from 'acorn'
+import { format } from 'prettier'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { dirname, resolve } from 'node:path'
@@ -9,33 +11,44 @@ const here = dirname(fileURLToPath(import.meta.url))
 const outputPath = resolve(here, '../lib/client.js')
 let source = await readFile(sourcePath, 'utf8')
 
-function replaceOnce(label, before, after) {
-  const first = source.indexOf(before)
-  if (first === -1) throw new Error(`build-client: ${label} anchor not found`)
-  if (source.indexOf(before, first + before.length) !== -1) {
-    throw new Error(`build-client: ${label} anchor is not unique`)
-  }
-  source = source.slice(0, first) + after + source.slice(first + before.length)
+// Match JavaScript tokens so upstream whitespace and quote changes cannot break patches.
+function tokens(code) {
+  return [...tokenizer(code, { ecmaVersion: 'latest' })].filter(t => t.type.label !== ';').map(t => ({
+    key: t.type.label + ':' + (t.value === undefined ? '' : String(t.value)), start: t.start, end: t.end
+  }));
 }
-
+function matches(before) {
+  const pattern = tokens(before), all = tokens(source), found = [];
+  for (let i = 0; i <= all.length - pattern.length; i++) {
+    if (pattern.every((t, j) => t.key === all[i + j].key)) found.push([all[i].start, all[i + pattern.length - 1].end]);
+  }
+  return found;
+}
 function replaceExactly(label, before, after, expected) {
-  let count = 0
-  let offset = 0
-  while ((offset = source.indexOf(before, offset)) !== -1) {
-    count += 1
-    offset += before.length
+  const found = matches(before);
+  if (found.length !== expected) throw new Error(`build-client: ${label} expected ${expected} anchors, found ${found.length}`);
+  for (const [start, end] of found.reverse()) source = source.slice(0, start) + after + source.slice(end);
+}
+function replaceOnce(label, before, after) { replaceExactly(label, before, after, 1); }
+// Normalize constant template strings, preserving interpolated templates unchanged.
+const rawTokens = [...tokenizer(source, { ecmaVersion: 'latest' })];
+for (let i = rawTokens.length - 3; i >= 0; i--) {
+  const [a, b, c] = rawTokens.slice(i, i + 3);
+  if (a.type.label === String.fromCharCode(96) && b.type.label === 'template' && c.type.label === String.fromCharCode(96)) {
+    source = source.slice(0, a.start) + JSON.stringify(b.value) + source.slice(c.end);
   }
-  if (count !== expected) {
-    throw new Error(`build-client: ${label} expected ${expected} anchors, found ${count}`)
-  }
-  source = source.replaceAll(before, after)
 }
 
+const arrowTokens = [...tokenizer(source, { ecmaVersion: 'latest' })];
+for (let i = arrowTokens.length - 2; i >= 0; i--) {
+  const a = arrowTokens[i], b = arrowTokens[i + 1];
+  if (a.type.label === 'name' && b.type.label === '=>') source = source.slice(0, a.start) + '(' + source.slice(a.start, a.end) + ')' + source.slice(a.end);
+}
 source = source.replaceAll('@deepseek-ai/dsh-client-ui-settings-models', '@mofeng2223/dsh-claude-provider')
 
 const helpers = await readFile(new URL('./client-claude.js', import.meta.url), 'utf8')
-replaceOnce('Claude model helpers', '\t\t/** Stable visible and accessible identity for one provider target. */',
-  '\t\t// BEGIN CLAUDE HELPERS\n' + helpers.split('\n').map(line => line.length ? '\t\t' + line : '').join('\n') + '\n\t\t// END CLAUDE HELPERS\n\t\t/** Stable visible and accessible identity for one provider target. */')
+replaceOnce('Claude model helpers', 'function joinProviderDirectory(',
+  '\t\t// BEGIN CLAUDE HELPERS\n' + helpers.split('\n').map(line => line.length ? '\t\t' + line : '').join('\n') + '\n\t\t// END CLAUDE HELPERS\nfunction joinProviderDirectory(')
 
 
 replaceOnce(
@@ -91,8 +104,8 @@ replaceOnce(
 
 replaceOnce(
   'existing Claude profile serialization',
-  '\t\t\t\tconst next = layout === "pi-ai" && stringAt(draft, "apiKeyEnv") === void 0 && stringAt(fallback, "apiKeyEnv") === void 0 && keyValue.length > 0 ? schema.setPath(draft, ["apiKeyEnv"], keyRef) : draft;',
-  '\t\t\t\tconst credentialDraft = layout === "pi-ai" && stringAt(draft, "apiKeyEnv") === void 0 && stringAt(fallback, "apiKeyEnv") === void 0 && keyValue.length > 0 ? schema.setPath(draft, ["apiKeyEnv"], keyRef) : draft;\n\t\t\t\tconst next = props.thinkingPresets === true ? withNativeClaudeProfile(credentialDraft) : credentialDraft;',
+  '\t\t\t\tconst next = layout === "pi-ai" && stringAt(profileDraft, "apiKeyEnv") === void 0 && stringAt(schema.getPath(namespace.base, settingsPath), "apiKeyEnv") === void 0 && keyValue.length > 0 ? schema.setPath(profileDraft, ["apiKeyEnv"], keyRef) : profileDraft;',
+  '\t\t\t\tconst credentialDraft = layout === "pi-ai" && stringAt(profileDraft, "apiKeyEnv") === void 0 && stringAt(schema.getPath(namespace.base, settingsPath), "apiKeyEnv") === void 0 && keyValue.length > 0 ? schema.setPath(profileDraft, ["apiKeyEnv"], keyRef) : profileDraft;\n\t\t\t\tconst next = props.thinkingPresets === true ? withNativeClaudeProfile(credentialDraft) : credentialDraft;',
 )
 
 
@@ -133,11 +146,9 @@ replaceExactly(
   2,
 )
 
-replaceOnce(
-  'row Claude badge',
-  '\t\t\t\t\t\t\t\t\t\t\t\trow.entry.provider === "deepseek-account" ?',
-  '\t\t\t\t\t\t\t\t\t\t\t\tadaptiveClaude ? (0, react_jsx_runtime.jsx)("span", {\n\t\t\t\t\t\t\t\t\t\t\t\t\tclassName: ModelsSection_module_css_default["rowTag"],\n\t\t\t\t\t\t\t\t\t\t\t\t\tchildren: t("adaptiveClaudeTag")\n\t\t\t\t\t\t\t\t\t\t\t\t}) : null,\n\t\t\t\t\t\t\t\t\t\t\t\trow.entry.provider === "deepseek-account" ?',
-)
+replaceOnce('row Claude badge',
+  'row.entry.provider === "deepseek-account" ? (0, react_jsx_runtime.jsxs)("span", { className: ModelsSection_module_css_default["accountStatus"],',
+  'adaptiveClaude ? (0, react_jsx_runtime.jsx)("span", {className: ModelsSection_module_css_default["rowTag"], children: t("claudeTypeTag")}) : null, row.entry.provider === "deepseek-account" ? (0, react_jsx_runtime.jsxs)("span", { className: ModelsSection_module_css_default["accountStatus"],');
 
 source = source.replaceAll('children: t("adaptiveClaudeTag")', 'children: t("claudeTypeTag")')
 
@@ -152,8 +163,8 @@ replaceOnce(
 
 replaceOnce(
   'Claude model row defaults and presets',
-  '\t\t\t\t\t\t\tinputField: "input",\n\t\t\t\t\t\t\tinputFallback: inputDefaults.get(textOf(model, "id")) ?? props.defaultInput,',
-  '\t\t\t\t\t\t\tinputField: "input",\n\t\t\t\t\t\t\tthinkingPresets: props.thinkingPresets,\n\t\t\t\t\t\t\tinputFallback: props.thinkingPresets && CLAUDE_KNOWN_MODELS[model.id] ? ["text", "image"] : inputDefaults.get(textOf(model, "id")) ?? props.defaultInput,',
+  '\t\t\t\t\t\t\tinputField: "input",\n\t\t\t\t\t\t\tinputFallback: inputDefaults.get(textOf$1(model, "id")) ?? props.defaultInput,',
+  '\t\t\t\t\t\t\tinputField: "input",\n\t\t\t\t\t\t\tthinkingPresets: props.thinkingPresets,\n\t\t\t\t\t\t\tinputFallback: props.thinkingPresets && CLAUDE_KNOWN_MODELS[model.id] ? ["text", "image"] : inputDefaults.get(textOf$1(model, "id")) ?? props.defaultInput,',
 )
 
 replaceOnce(
@@ -164,13 +175,13 @@ replaceOnce(
 
 replaceOnce(
   'existing Anthropic card enables thinking presets',
-  '\t\t\t\t\t\t\t\t...catalogProps,\n\t\t\t\t\t\t\t\tcatalogProvider: props.declared === true ? void 0 : props.provider,\n\t\t\t\t\t\t\t\treasoningLevels,\n\t\t\t\t\t\t\t\tdefaultInput: Array.isArray(defaultInput) ? defaultInput : void 0,\n\t\t\t\t\t\t\t\tprobe,\n\t\t\t\t\t\t\t\tprobeBlocked: keyFailure,\n\t\t\t\t\t\t\t\toperations',
-  '\t\t\t\t\t\t\t\t...catalogProps,\n\t\t\t\t\t\t\t\tcatalogProvider: props.declared === true ? void 0 : props.provider,\n\t\t\t\t\t\t\t\treasoningLevels,\n\t\t\t\t\t\t\t\tdefaultInput: Array.isArray(defaultInput) ? defaultInput : void 0,\n\t\t\t\t\t\t\t\tprobe,\n\t\t\t\t\t\t\t\tprobeBlocked: keyFailure,\n\t\t\t\t\t\t\t\tthinkingPresets: props.thinkingPresets === true,\n\t\t\t\t\t\t\t\toperations',
+  '\t\t\t\t\t\t\t\t...catalogProps,\n\t\t\t\t\t\t\t\tcatalogProvider: props.declared === true ? void 0 : props.provider,\n\t\t\t\t\t\t\t\treasoningLevels: reasoning.levels,\n\t\t\t\t\t\t\t\treasoningLevelsOnly: reasoning.levelsOnly,\n\t\t\t\t\t\t\t\tdefaultInput: Array.isArray(defaultInput) ? defaultInput : void 0,\n\t\t\t\t\t\t\t\tprobe,\n\t\t\t\t\t\t\t\tprobeBlocked: keyRemoval !== void 0 ? "keyRemovePending" : shownKeyFailure,\n\t\t\t\t\t\t\t\toperations',
+  '\t\t\t\t\t\t\t\t...catalogProps,\n\t\t\t\t\t\t\t\tcatalogProvider: props.declared === true ? void 0 : props.provider,\n\t\t\t\t\t\t\t\treasoningLevels: reasoning.levels,\n\t\t\t\t\t\t\t\treasoningLevelsOnly: reasoning.levelsOnly,\n\t\t\t\t\t\t\t\tdefaultInput: Array.isArray(defaultInput) ? defaultInput : void 0,\n\t\t\t\t\t\t\t\tprobe,\n\t\t\t\t\t\t\t\tprobeBlocked: keyRemoval !== void 0 ? "keyRemovePending" : shownKeyFailure,\n\t\t\t\t\t\t\t\tthinkingPresets: props.thinkingPresets === true,\n\t\t\t\t\t\t\t\toperations',
 )
 
 replaceOnce('native reasoning editor Claude props',
-  'function ModelReasoningEfforts({ model, levels, position, disabled, t, onChange }) {',
-  'function ModelReasoningEfforts({ model, levels, position, disabled, t, onChange, claude, adaptiveFallback }) {')
+  'function ModelReasoningEfforts(props) { const { model, levels, levelsOnly, position, disabled, t, onChange } = props;',
+  'function ModelReasoningEfforts(props) { const { model, levels, levelsOnly, position, disabled, t, onChange, claude, adaptiveFallback } = props;')
 replaceOnce('native reasoning editor model defaults',
   'const initialEntries = INITIAL_LEVELS.filter((level) => levels.includes(level)).map((level) => [level, defaultValue(level)]);',
   'const initialEntries = claude ? Object.entries(reasoningEffortsForPreset(CLAUDE_KNOWN_MODELS[model.id]?.preset ?? "five")) : INITIAL_LEVELS.filter((level) => levels.includes(level)).map((level) => [level, defaultValue(level)]);')
@@ -213,15 +224,25 @@ replaceOnce('Claude provider option',
   '...customEnabled ? {} : { title: t("addCustomUnavailable") }\n\t\t\t\t\t\t\t\t\t\t}],',
   '...customEnabled ? {} : { title: t("addCustomUnavailable") }\n\t\t\t\t\t\t\t\t\t\t}, { value: "claude", label: t("claudeCustomTitle"), disabled: !claudeEnabled }],')
 // Keep independent mounted cards so switching modes preserves both drafts.
-const panelStart = source.indexOf('\t\t\t\t\t\t\t\tmounted("custom") && piAi !== void 0');
-const panelEnd = source.indexOf('}) : null', panelStart) + '}) : null'.length;
-if (panelStart < 0 || panelEnd < panelStart) throw new Error('custom panel not found');
-const customPanel = source.slice(panelStart, panelEnd);
+const panelAnchor = matches('mounted("custom") && piAi !== void 0');
+if (panelAnchor.length !== 1) throw new Error('custom panel anchor not unique');
+let panel;
+function findPanel(node) {
+  if (!node || typeof node !== 'object') return;
+  if (node.type === 'ConditionalExpression' && node.start === panelAnchor[0][0]) panel = node;
+  for (const value of Object.values(node)) {
+    if (Array.isArray(value)) value.forEach(findPanel);
+    else if (value && typeof value === 'object') findPanel(value);
+  }
+}
+findPanel(parse(source, { ecmaVersion: 'latest' }));
+if (!panel) throw new Error('custom panel not found');
+const customPanel = source.slice(panel.start, panel.end);
 const claudePanel = customPanel.replaceAll('"custom"', '"claude"')
   .replaceAll('-custom', '-claude')
-  .replace('taken: state.rows', 'providerType: CLAUDE_PROVIDER_TYPE,\n\t\t\t\t\t\t\t\t\t\ttaken: state.rows')
-  .replace('onBusyChange: setCustomBusy', 'onBusyChange: setClaudeBusy');
-source = source.slice(0, panelEnd) + ',\n' + claudePanel + source.slice(panelEnd);
+  .replace(/taken:\s*state.rows/, 'providerType: CLAUDE_PROVIDER_TYPE, taken: state.rows')
+  .replace(/onBusyChange:\s*setCustomBusy/, 'onBusyChange: setClaudeBusy');
+source = source.slice(0, panel.end) + ',\n' + claudePanel + source.slice(panel.end);
 
 replaceOnce('hide generic hint on Claude tab', "className: ModelsSection_module_css_default[\"advancedHint\"],\n\t\t\t\t\t\t\t\t\t\tchildren: t(mode === \"catalog\" ? \"addCatalogHint\" : \"addCustomHint\")", "hidden: mode === \"claude\",\n\t\t\t\t\t\t\t\t\t\tclassName: ModelsSection_module_css_default[\"advancedHint\"],\n\t\t\t\t\t\t\t\t\t\tchildren: t(mode === \"catalog\" ? \"addCatalogHint\" : \"addCustomHint\")")
 
@@ -229,5 +250,6 @@ replaceOnce('compact English provider tabs', 'addCatalog: "Third-party model pro
 replaceOnce('compact English custom API tab', 'addCustom: "Custom model API",', 'addCustom: "Custom API",')
 
 await mkdir(dirname(outputPath), { recursive: true })
+source = await format(source, { parser: 'babel', useTabs: true, trailingComma: 'none', printWidth: 120 });
 await writeFile(outputPath, source)
 process.stdout.write(`${outputPath}\n`)
