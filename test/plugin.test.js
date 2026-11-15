@@ -416,6 +416,38 @@ test('Sonnet 5.5 discovery and saved model use official capacities, vision and a
   assert.equal(saved.compat.forceAdaptiveThinking, true)
 })
 
+test('Fable 5.2 discovery and saved model use official capacities, vision and adaptive five-level thinking', async () => {
+  const id = 'claude-fable-5-2'
+  const models = await discoverAnthropicModels({
+    baseURL: 'https://example.com', apiKey: 'test-key',
+    fetchImpl: async () => jsonResponse({ data: [{ id }], has_more: false }),
+  })
+  assert.equal(models[0].contextWindow, 1000000)
+  assert.equal(models[0].maxTokens, 128000)
+  const tableStart = builtClient.indexOf('const CLAUDE_KNOWN_MODELS = ')
+  const tableEnd = builtClient.indexOf('\n\t\t});', tableStart)
+  const clientModels = new Function(`${builtClient.slice(tableStart, tableEnd + 7)}; return CLAUDE_KNOWN_MODELS;`)()
+  assert.deepEqual(clientModels[id], CLAUDE_KNOWN_MODELS[id])
+  const five = { low: 'low', medium: 'medium', high: 'high', xhigh: 'xhigh', max: 'max' }
+  const reasoningEffortsForPreset = clientFunction('reasoningEffortsForPreset', { CLAUDE_FIVE_EFFORTS: five })
+  const withDefaultClaudeReasoning = clientFunction('withDefaultClaudeReasoning', { reasoningEffortsForPreset })
+  const withKnownClaudeInput = clientFunction('withKnownClaudeInput', { CLAUDE_KNOWN_MODELS: clientModels })
+  const fetched = clientFunction('withFetchedClaudeMetadata', { CLAUDE_KNOWN_MODELS: clientModels, withKnownClaudeInput, withDefaultClaudeReasoning, reasoningEffortsForPreset })(models[0])
+  const saved = clientFunction('withNativeClaudeModel', { withKnownClaudeInput, withDefaultClaudeReasoning })(fetched)
+  assert.equal(saved.contextWindow, 1000000)
+  assert.equal(saved.maxTokens, 128000)
+  assert.deepEqual(saved.input, ['text', 'image'])
+  assert.deepEqual(saved.reasoningEfforts, five)
+  assert.equal(saved.compat.forceAdaptiveThinking, true)
+  const manual = helperBindings.finishClaudeDraft(helperBindings.carryClaudeDraft(helperBindings.newClaudeModel(), { id }))
+  assert.equal(manual.contextWindow, 1000000)
+  assert.equal(manual.maxTokens, 128000)
+  assert.deepEqual(manual.reasoningEfforts, five)
+  assert.equal(manual.compat.forceAdaptiveThinking, true)
+  const customized = { ...manual, contextWindow: 500000, reasoningEfforts: { high: 'max' } }
+  assert.deepEqual(helperBindings.withNativeClaudeModel(customized), customized)
+})
+
 test('Haiku 5.5 discovery and saved model use official capacities, vision and adaptive five-level thinking', async () => {
   const id = 'claude-haiku-5-5'
   const models = await discoverAnthropicModels({

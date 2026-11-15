@@ -71,6 +71,7 @@ replaceOnce(
   '\t\tconst CLAUDE_TOGGLE_EFFORTS = Object.freeze({ off: null, high: "high" });',
   `\t\tconst CLAUDE_TOGGLE_EFFORTS = Object.freeze({ off: null, high: "high" });
 \t\tconst CLAUDE_KNOWN_MODELS = Object.freeze({
+\t\t\t"claude-fable-5-2": Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: "five" }),
 \t\t\t"claude-fable-5-1": Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: "five" }),\n\t\t\t"claude-fable-5": Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: "five" }),
 \t\t\t"claude-haiku-5-5": Object.freeze({ contextWindow: 1000000, maxTokens: 128000, preset: "five" }),
 \t\t\t"claude-haiku-4-5-20251001": Object.freeze({ contextWindow: 200000, maxTokens: 64000, preset: "toggle" }),
