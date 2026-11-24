@@ -1,5 +1,12 @@
 - insert:
     - id: dsh-claude-provider
       name: '@mofeng2223/dsh-claude-provider'
+      config:
+        credentialOnboarding: !!js |
+          (() => {
+            const entry = [...loader.entries()].find(entry => entry.options.id === 'ui-settings-models');
+            const value = entry?.options.config?.credentialOnboarding;
+            return value?.__jsExpr ? entry.evaluate(value.__jsExpr) : value ?? true;
+          })()
 - id: ui-settings-models
   disabled: true

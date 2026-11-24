@@ -96,22 +96,22 @@ test('RC2 provider diagnostics survive the directory join even for inactive prov
   assert.match(builtClient, /role: "alert",[\s\S]*?children: row\.entry\.error/)
 })
 
-test('builds the forked section against DSH 0.2.2-rc.5', () => {
+test('builds the forked section against DSH 0.2.3-alpha.2', () => {
   assert.equal(packageManifest.exports['./client'], './lib/client.js')
   assert.equal(packageManifest.scripts.build, 'node scripts/build-client.mjs')
-  assert.equal(packageManifest.devDependencies['@deepseek-ai/dsh-client-ui-settings-models'], '0.2.2-rc.5')
+  assert.equal(packageManifest.devDependencies['@deepseek-ai/dsh-client-ui-settings-models'], '0.2.3-alpha.2')
   assert.ok(!packageManifest.dsh.client.inject.includes('@deepseek-ai/dsh-client-runtime'))
 })
 
 test('model selection removes unchecked listed rows while preserving custom settings and unlisted rows', () => {
   const start = builtClient.indexOf('const configuredIds =');
   const end = builtClient.indexOf('const toggle =', start);
-  const reconcile = new Function('models', 'candidates', 'flipped', 'adopt', 'props', 'withFetchedClaudeMetadata', 'textOf$1', 'onChange', 'rowState', 'closePicker',
+  const reconcile = new Function('react', 'TextSearchIndex', 'models', 'candidates', 'flipped', 'adopt', 'props', 'withFetchedClaudeMetadata', 'textOf$1', 'onChange', 'rowState', 'closePicker',
     builtClient.slice(start, end) + '; return { adoptPicked, emptiesList };');
   const custom = { id: 'claude-opus-5', contextWindow: 456000, reasoningEfforts: { high: 'max' }, compat: { forceAdaptiveThinking: false } };
   const unlisted = { id: 'private-model' };
   let saved, removed;
-  const run = (models, candidates, flipped) => reconcile(models, candidates, new Set(flipped), x => ({ ...x }), { thinkingPresets: true }, helperBindings.withFetchedClaudeMetadata, (x, k) => x[k], x => { saved = x }, { forget: x => { removed = x } }, () => {});
+  const run = (models, candidates, flipped) => reconcile({ useMemo: fn => fn() }, class {}, models, candidates, new Set(flipped), x => ({ ...x }), { thinkingPresets: true }, helperBindings.withFetchedClaudeMetadata, (x, k) => x[k], x => { saved = x }, { forget: x => { removed = x } }, () => {});
   const result = run([custom, { id: 'old-model' }, unlisted], [{ id: custom.id }, { id: 'old-model' }, { id: 'claude-haiku-4-5' }], ['old-model', 'claude-haiku-4-5']);
   assert.equal(result.emptiesList, false);
   result.adoptPicked();
@@ -525,4 +525,33 @@ test('alpha.3 shared provider editor preserves Claude controls and credential me
     assert.equal(result.props.credential, credential)
     assert.equal(result.props.credentialChecks.TEST_API_KEY, credential)
   }
+})
+
+test('onboarding retains the official configuration source and its false value', async () => {
+  const { Config } = await import('../src/index.js')
+  const patch = readFileSync(new URL('../cordis.patch.yml', import.meta.url), 'utf8')
+  const expression = patch.split('credentialOnboarding: !!js |\n')[1].split('\n- id:')[0]
+  const read = new Function('loader', 'return ' + expression)
+  const loader = value => ({ entries: () => [{ options: { id: 'ui-settings-models', config: { credentialOnboarding: value } }, evaluate: () => false }] })
+  assert.equal(read(loader(false)), false)
+  assert.equal(read(loader(true)), true)
+  assert.equal(read(loader(undefined)), true)
+  assert.equal(read(loader({ __jsExpr: 'false' })), false)
+  assert.equal(Config({ credentialOnboarding: false }).credentialOnboarding.get(), false)
+  assert.match(builtClient, /config\.credentialOnboarding\.subscribe/)
+  assert.match(builtClient, /stylesheets:/)
+  assert.match(builtClient, /window\.__ModuleLoader__\.load/)
+})
+
+test('an absent stored credential does not fall back to an environment key', async () => {
+  const { ctx, llm } = fakeContext({ typed: true })
+  ctx.get = name => ({
+    settings: { describe: () => [{ ns: 'llm-pi-ai', value: { providers: { test: { apiKeyEnv: 'TEST_CLAUDE_KEY' } } } }] },
+    credentials: { resolve: async () => undefined },
+    launchEnvironment: { get: () => ({ value: 'must-not-be-used' }) },
+  })[name]
+  apply(ctx)
+  await assert.rejects(llm.discoverModels('llm-pi-ai', {
+    api: CLAUDE_DISCOVERY_API, provider: 'test', baseURL: 'http://127.0.0.1:1',
+  }), /未找到已保存的凭据/)
 })

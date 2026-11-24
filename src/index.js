@@ -7,6 +7,7 @@ export const CLAUDE_PROVIDER_TYPE = 'claude-adaptive'
 export const CLAUDE_PROVIDER_SETTINGS_NS = 'dsh-claude-provider'
 
 export const Config = z.object({
+  credentialOnboarding: z.boolean().default(true).volatile(),
   providerTypes: z.dict(z.const(CLAUDE_PROVIDER_TYPE)).default({}).volatile(),
 })
 
@@ -225,7 +226,11 @@ async function discoveryApiKey(ctx, request) {
   if (typeof request.apiKey === 'string' && request.apiKey.trim().length > 0) return request.apiKey
   const ref = configuredCredentialRef(ctx, request.provider)
   if (ref === undefined) throw new Error('Claude 模型目录：请先填写 API 密钥')
-  const value = (await ctx.get('credentials')?.resolve(ref))?.value ?? process.env[ref]
+  const credentials = ctx.get('credentials')
+  const environment = ctx.get('launchEnvironment')
+  const value = credentials !== undefined
+    ? (await credentials.resolve(ref))?.value
+    : environment !== undefined ? environment.get(ref)?.value : process.env[ref]
   if (typeof value !== 'string' || value.trim().length === 0) {
     throw new Error(`Claude 模型目录：未找到已保存的凭据 ${ref}`)
   }
